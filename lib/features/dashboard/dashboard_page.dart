@@ -20,18 +20,50 @@ class DashboardPage extends StatelessWidget {
       (title: 'Mídia', icon: Icons.perm_media_outlined, page: const MediaLibrary()),
     ];
     return Scaffold(
-      appBar: AppBar(title: const Text('LIVE STUDIO ASR'), actions: [IconButton(onPressed: () {}, icon: const Icon(Icons.settings_outlined), tooltip: 'Configurações')]),
+      appBar: AppBar(
+        title: const Text('LIVE STUDIO ASR'),
+        actions: [
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Configurações',
+          ),
+        ],
+      ),
       body: GridView.builder(
         padding: const EdgeInsets.all(20),
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 280, mainAxisExtent: 150, crossAxisSpacing: 16, mainAxisSpacing: 16),
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 280,
+          mainAxisExtent: 150,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+        ),
         itemCount: modules.length,
         itemBuilder: (context, index) {
           final module = modules[index];
           return Card(
             clipBehavior: Clip.antiAlias,
             child: InkWell(
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => module.page)),
-              child: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [Icon(module.icon, size: 34), const SizedBox(height: 14), Text(module.title, style: Theme.of(context).textTheme.titleLarge)])),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => module.page),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(module.icon, size: 34),
+                    const SizedBox(height: 10),
+                    Text(
+                      module.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ],
+                ),
+              ),
             ),
           );
         },
