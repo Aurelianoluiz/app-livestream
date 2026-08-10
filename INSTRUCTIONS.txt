@@ -1,0 +1,6 @@
+# INSTRUCTIONS
+1. Instale Flutter stable.
+2. Execute flutter pub get.
+3. Execute flutter analyze.
+4. Execute flutter test --coverage.
+5. Para builds, use os workflows em .github/workflows.
