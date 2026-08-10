@@ -1,1 +1,7 @@
-Brand scan performed on files added in this commit: 0 occurrences of legacy brand text in active project source.
+LIVE STUDIO ASR — occurrences report
+
+Search term: COMERCIAL MOURA
+Scope: tracked repository files on feature/live-studio-asr
+Result: 0 occurrences found by GitHub repository search.
+
+Verification date: 2026-08-10
