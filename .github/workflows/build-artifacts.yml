@@ -1,0 +1,76 @@
+name: Build artifacts
+
+on:
+  push:
+    branches: [feature/live-studio-asr]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: stable
+          cache: true
+
+      - name: Generate Flutter platform scaffolding
+        run: flutter create --platforms web,android --org com.asr.live_studio --project-name live_studio_asr .
+
+      - name: Remove generated sample test
+        run: rm -f test/widget_test.dart
+
+      - name: Align Android Kotlin plugin
+        run: sed -i '/org.jetbrains.kotlin.android/s/version "[^"]*"/version "1.9.24"/' android/settings.gradle
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test --coverage
+
+      - name: Build Web
+        run: flutter build web --release
+
+      - name: Build Android APK
+        run: flutter build apk --release
+
+      - name: Build Android AAB
+        run: flutter build appbundle --release
+
+      - name: Upload Web
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-studio-asr-web
+          path: build/web
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-studio-asr-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload Android AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-studio-asr-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+
+      - name: Build summary
+        run: |
+          {
+            echo '## LIVE STUDIO ASR builds'
+            echo '- Web: PASSOU'
+            echo '- APK: PASSOU'
+            echo '- AAB: PASSOU'
+            echo '- Android artifacts are validation builds and are unsigned for store publication until a production keystore is configured.'
+          } >> "$GITHUB_STEP_SUMMARY"

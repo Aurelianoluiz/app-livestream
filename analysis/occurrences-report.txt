@@ -1,0 +1,7 @@
+LIVE STUDIO ASR — occurrences report
+
+Search term: COMERCIAL MOURA
+Scope: tracked repository files on feature/live-studio-asr
+Result: 0 occurrences found by GitHub repository search.
+
+Verification date: 2026-08-10
