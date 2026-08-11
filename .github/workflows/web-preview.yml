@@ -1,0 +1,54 @@
+name: LIVE STUDIO ASR — Web Preview
+
+on:
+  push:
+    branches: [feature/live-studio-asr]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: stable
+          cache: true
+
+      - name: Generate Flutter platform scaffolding
+        run: flutter create --platforms web --org com.asr.live_studio --project-name live_studio_asr .
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Web Preview
+        run: flutter build web --release --base-href /app-livestream/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
