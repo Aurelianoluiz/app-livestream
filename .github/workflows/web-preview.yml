@@ -2,7 +2,9 @@ name: LIVE STUDIO ASR — Web Preview
 
 on:
   push:
-    branches: [feature/live-studio-asr]
+    branches:
+      - main
+      - feature/live-studio-asr
   workflow_dispatch:
 
 permissions:
@@ -33,6 +35,12 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test --coverage
 
       - name: Build Web Preview
         run: flutter build web --release --base-href /app-livestream/
