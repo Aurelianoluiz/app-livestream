@@ -2,9 +2,7 @@ name: LIVE STUDIO ASR — Web Preview
 
 on:
   push:
-    branches:
-      - main
-      - feature/live-studio-asr
+    branches: [main, feature/live-studio-asr]
   workflow_dispatch:
 
 permissions:
@@ -31,7 +29,10 @@ jobs:
           cache: true
 
       - name: Generate Flutter platform scaffolding
-        run: flutter create --platforms web --org com.asr.live_studio --project-name live_studio_asr .
+        run: flutter create --platforms web --org com.asr.live_studio --project-name live_studio_asr --no-pub .
+
+      - name: Remove generated sample test
+        run: rm -f test/widget_test.dart
 
       - name: Install dependencies
         run: flutter pub get
