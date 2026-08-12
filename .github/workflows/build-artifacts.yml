@@ -2,7 +2,7 @@ name: Build artifacts
 
 on:
   push:
-    branches: [feature/live-studio-asr]
+    branches: [main, feature/live-studio-asr]
   workflow_dispatch:
 
 permissions:
