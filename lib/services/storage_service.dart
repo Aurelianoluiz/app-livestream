@@ -9,8 +9,11 @@ class StorageService {
   static const transmissionsBox = 'transmissions';
   static const overlaysBox = 'overlays';
 
-  Future<void> init() async {
-    await Hive.initFlutter();
+  Future<void>? _initializing;
+
+  Future<void> init() {
+    _initializing ??= Hive.initFlutter();
+    return _initializing!;
   }
 
   Future<List<String>> load(String boxName) async {
@@ -30,6 +33,7 @@ class StorageService {
   }
 
   Future<Box<String>> _open(String name) async {
+    await init();
     if (Hive.isBoxOpen(name)) return Hive.box<String>(name);
     return Hive.openBox<String>(name);
   }
