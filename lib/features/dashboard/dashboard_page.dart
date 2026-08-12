@@ -6,6 +6,7 @@ import '../offers/offers_page.dart';
 import '../transmissions/transmissions_page.dart';
 import '../overlays/overlays_page.dart';
 import '../media/media_library.dart';
+import '../settings/settings_page.dart';
 import '../../providers/scenes_provider.dart';
 import '../../providers/products_provider.dart';
 import '../../providers/offers_provider.dart';
@@ -24,48 +25,12 @@ class DashboardPage extends ConsumerWidget {
     final overlays = ref.watch(overlaysProvider);
 
     final modules = <({String title, String description, IconData icon, Widget page, int count})>[
-      (
-        title: 'Cenas',
-        description: 'Organize as cenas da sua transmissão',
-        icon: Icons.layers_outlined,
-        page: const ScenesPage(),
-        count: scenes.length,
-      ),
-      (
-        title: 'Produtos',
-        description: 'Catálogo, preços e estoque',
-        icon: Icons.inventory_2_outlined,
-        page: const ProductsPage(),
-        count: products.length,
-      ),
-      (
-        title: 'Ofertas',
-        description: 'Promoções e campanhas ativas',
-        icon: Icons.local_offer_outlined,
-        page: const OffersPage(),
-        count: offers.length,
-      ),
-      (
-        title: 'Transmissões',
-        description: 'Agenda e controle das lives',
-        icon: Icons.live_tv_outlined,
-        page: const TransmissionsPage(),
-        count: transmissions.length,
-      ),
-      (
-        title: 'Overlays',
-        description: 'Elementos visuais da live',
-        icon: Icons.dashboard_customize_outlined,
-        page: const OverlaysPage(),
-        count: overlays.length,
-      ),
-      (
-        title: 'Mídia',
-        description: 'Imagens, logos e biblioteca',
-        icon: Icons.perm_media_outlined,
-        page: const MediaLibrary(),
-        count: 3,
-      ),
+      (title: 'Cenas', description: 'Organize as cenas da sua transmissão', icon: Icons.layers_outlined, page: const ScenesPage(), count: scenes.length),
+      (title: 'Produtos', description: 'Catálogo, preços e estoque', icon: Icons.inventory_2_outlined, page: const ProductsPage(), count: products.length),
+      (title: 'Ofertas', description: 'Promoções e campanhas ativas', icon: Icons.local_offer_outlined, page: const OffersPage(), count: offers.length),
+      (title: 'Transmissões', description: 'Agenda e controle das lives', icon: Icons.live_tv_outlined, page: const TransmissionsPage(), count: transmissions.length),
+      (title: 'Overlays', description: 'Elementos visuais da live', icon: Icons.dashboard_customize_outlined, page: const OverlaysPage(), count: overlays.length),
+      (title: 'Mídia', description: 'Imagens, logos e biblioteca', icon: Icons.perm_media_outlined, page: const MediaLibrary(), count: 3),
     ];
 
     return Scaffold(
@@ -73,7 +38,7 @@ class DashboardPage extends ConsumerWidget {
         title: const Text('LIVE STUDIO ASR'),
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsPage())),
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Configurações',
           ),
@@ -127,29 +92,19 @@ class DashboardPage extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Icon(module.icon, size: 30),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primaryContainer,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text('${module.count}'),
-                            ),
-                          ],
-                        ),
+                        Row(children: [
+                          Icon(module.icon, size: 30),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                            decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(20)),
+                            child: Text('${module.count}'),
+                          ),
+                        ]),
                         const SizedBox(height: 12),
                         Text(module.title, style: Theme.of(context).textTheme.titleLarge),
                         const SizedBox(height: 5),
-                        Text(
-                          module.description,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
+                        Text(module.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodyMedium),
                       ],
                     ),
                   ),
@@ -194,10 +149,7 @@ class _LivePreviewCard extends StatelessWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+                    decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(20)),
                     child: const Text('EXEMPLO DE LIVE'),
                   ),
                   const SizedBox(height: 10),
@@ -205,11 +157,7 @@ class _LivePreviewCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   const Text('Pré-visualização da sua transmissão', style: TextStyle(color: Colors.white70)),
                   const SizedBox(height: 14),
-                  FilledButton.icon(
-                    onPressed: onOpen,
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Abrir transmissões'),
-                  ),
+                  FilledButton.icon(onPressed: onOpen, icon: const Icon(Icons.play_arrow), label: const Text('Abrir transmissões')),
                 ],
               ),
             ),
@@ -238,25 +186,11 @@ class _SummaryCard extends StatelessWidget {
             const SizedBox(height: 16),
             ...List.generate(labels.length, (index) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  Icon(icons[index], size: 22),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(labels[index])),
-                  Text('${counts[index]}', style: Theme.of(context).textTheme.titleMedium),
-                ],
-              ),
+              child: Row(children: [Icon(icons[index], size: 22), const SizedBox(width: 10), Expanded(child: Text(labels[index])), Text('${counts[index]}', style: Theme.of(context).textTheme.titleMedium)]),
             )),
             const Divider(),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.circle, size: 12, color: Colors.green),
-                const SizedBox(width: 8),
-                const Expanded(child: Text('OBS NÃO CONECTADO')),
-                Text('Preparado', style: Theme.of(context).textTheme.bodySmall),
-              ],
-            ),
+            const Row(children: [Icon(Icons.circle, size: 12, color: Colors.green), SizedBox(width: 8), Expanded(child: Text('OBS NÃO CONECTADO')), Text('Preparado')]),
           ],
         ),
       ),
