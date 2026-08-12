@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/demo_list_provider.dart';
 
 class EntityListPage extends ConsumerWidget {
   final String title;
-  final StateProvider<List<String>> provider;
+  final StateNotifierProvider<DemoListNotifier, List<String>> provider;
   final String singular;
-  const EntityListPage({super.key, required this.title, required this.provider, required this.singular});
+
+  const EntityListPage({
+    super.key,
+    required this.title,
+    required this.provider,
+    required this.singular,
+  });
 
   Future<void> _add(BuildContext context, WidgetRef ref) async {
     final controller = TextEditingController();
@@ -13,7 +20,11 @@ class EntityListPage extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Novo $singular'),
-        content: TextField(controller: controller, autofocus: true, decoration: const InputDecoration(labelText: 'Nome')),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(labelText: 'Nome do $singular'.replaceFirst('do $singular', '')),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
           FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Salvar')),
@@ -21,7 +32,7 @@ class EntityListPage extends ConsumerWidget {
       ),
     );
     if (value != null && value.isNotEmpty) {
-      ref.read(provider.notifier).update((items) => [...items, value]);
+      await ref.read(provider.notifier).addItem(value);
     }
   }
 
@@ -30,7 +41,11 @@ class EntityListPage extends ConsumerWidget {
     final items = ref.watch(provider);
     return Scaffold(
       appBar: AppBar(title: Text(title)),
-      floatingActionButton: FloatingActionButton.extended(onPressed: () => _add(context, ref), icon: const Icon(Icons.add), label: Text('Novo $singular')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _add(context, ref),
+        icon: const Icon(Icons.add),
+        label: Text('Novo $singular'),
+      ),
       body: items.isEmpty
           ? const Center(child: Text('Nenhum item cadastrado.'))
           : ListView.separated(
@@ -44,7 +59,7 @@ class EntityListPage extends ConsumerWidget {
                   trailing: IconButton(
                     tooltip: 'Excluir',
                     icon: const Icon(Icons.delete_outline),
-                    onPressed: () => ref.read(provider.notifier).update((list) => [...list]..removeAt(index)),
+                    onPressed: () => ref.read(provider.notifier).deleteAt(index),
                   ),
                 ),
               ),
