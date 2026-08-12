@@ -6,7 +6,7 @@ class MediaLibrary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const items = [
-      ('Exemplo de Live', 'assets/images/example.svg', Icons.live_tv_outlined),
+      ('Exemplo de Live', 'assets/images/example.jpg', Icons.live_tv_outlined),
       ('Logo principal', 'assets/branding/logo.svg', Icons.branding_watermark_outlined),
       ('Logo reduzida', 'assets/branding/logo-small.svg', Icons.crop_free_outlined),
     ];
@@ -29,6 +29,7 @@ class MediaLibrary extends StatelessWidget {
         itemCount: items.length,
         itemBuilder: (context, index) {
           final item = items[index];
+          final isSvg = item.$2.endsWith('.svg');
           return Card(
             clipBehavior: Clip.antiAlias,
             child: Column(
@@ -39,18 +40,16 @@ class MediaLibrary extends StatelessWidget {
                     width: double.infinity,
                     color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     padding: const EdgeInsets.all(16),
-                    child: item.$2.endsWith('.svg')
+                    child: isSvg
                         ? Center(child: Icon(item.$3, size: 54))
-                        : Image.asset(item.$2, fit: BoxFit.contain),
+                        : Image.asset(item.$2, fit: BoxFit.cover),
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
                   child: Row(
                     children: [
-                      Expanded(
-                        child: Text(item.$1, style: Theme.of(context).textTheme.titleMedium),
-                      ),
+                      Expanded(child: Text(item.$1, style: Theme.of(context).textTheme.titleMedium)),
                       const Icon(Icons.more_horiz),
                     ],
                   ),
