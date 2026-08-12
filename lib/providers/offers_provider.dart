@@ -1,9 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'demo_list_provider.dart';
+import '../services/storage_service.dart';
 
-/// Demo offers used by the Web preview.
-final offersProvider = StateProvider<List<String>>((ref) => [
+final offersProvider = StateNotifierProvider<DemoListNotifier, List<String>>((ref) {
+  return DemoListNotifier(
+    storage: ref.read(storageServiceProvider),
+    boxName: StorageService.offersBox,
+    seed: const [
       'Oferta Flash — Smart TV 50"',
       'Combo Notebook + Mochila',
       'Semana do Streaming',
       'Frete Grátis em Produtos Selecionados',
-    ]);
+    ],
+  );
+});
