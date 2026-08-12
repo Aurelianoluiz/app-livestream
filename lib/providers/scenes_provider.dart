@@ -1,9 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'demo_list_provider.dart';
+import '../services/storage_service.dart';
 
-/// Demo data so the Web preview is useful immediately after first launch.
-final scenesProvider = StateProvider<List<String>>((ref) => [
+final scenesProvider = StateNotifierProvider<DemoListNotifier, List<String>>((ref) {
+  return DemoListNotifier(
+    storage: ref.read(storageServiceProvider),
+    boxName: StorageService.scenesBox,
+    seed: const [
       'Abertura — LIVE STUDIO ASR',
       'Apresentação de Produtos',
       'Oferta Relâmpago',
       'Encerramento',
-    ]);
+    ],
+  );
+});
