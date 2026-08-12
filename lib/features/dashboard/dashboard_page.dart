@@ -111,7 +111,7 @@ class DashboardPage extends ConsumerWidget {
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
               maxCrossAxisExtent: 340,
-              mainAxisExtent: 168,
+              mainAxisExtent: 190,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
             ),
@@ -144,7 +144,12 @@ class DashboardPage extends ConsumerWidget {
                         const SizedBox(height: 12),
                         Text(module.title, style: Theme.of(context).textTheme.titleLarge),
                         const SizedBox(height: 5),
-                        Text(module.description, style: Theme.of(context).textTheme.bodyMedium),
+                        Text(
+                          module.description,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
                       ],
                     ),
                   ),
