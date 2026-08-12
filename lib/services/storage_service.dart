@@ -1,13 +1,14 @@
+import 'dart:convert';
 import 'package:hive_flutter/hive_flutter.dart';
 
-/// Small persistence layer for V1 collections.
-/// Models remain plain Dart objects; collections are stored as UTF-8 strings.
+/// Small persistence layer for V1 collections and application settings.
 class StorageService {
   static const scenesBox = 'scenes';
   static const productsBox = 'products';
   static const offersBox = 'offers';
   static const transmissionsBox = 'transmissions';
   static const overlaysBox = 'overlays';
+  static const settingsBox = 'settings';
 
   Future<void>? _initializing;
 
@@ -30,6 +31,22 @@ class StorageService {
   Future<void> clear(String boxName) async {
     final box = await _open(boxName);
     await box.clear();
+  }
+
+  Future<Map<String, dynamic>> loadSettings() async {
+    final box = await _open(settingsBox);
+    final raw = box.get('settings');
+    if (raw == null || raw.trim().isEmpty) return {};
+    try {
+      return Map<String, dynamic>.from(jsonDecode(raw) as Map);
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> saveSettings(Map<String, dynamic> settings) async {
+    final box = await _open(settingsBox);
+    await box.put('settings', jsonEncode(settings));
   }
 
   Future<Box<String>> _open(String name) async {
