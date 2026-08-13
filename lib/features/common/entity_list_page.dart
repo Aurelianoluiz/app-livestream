@@ -5,15 +5,10 @@ import '../../providers/demo_list_provider.dart';
 
 class EntityListPage extends ConsumerStatefulWidget {
   final String title;
-  final StateNotifierProvider<DemoListNotifier, List<String>> provider;
+  final StateNotifierProvider<DemoListNotifier, List<LiveRecord>> provider;
   final String singular;
 
-  const EntityListPage({
-    super.key,
-    required this.title,
-    required this.provider,
-    required this.singular,
-  });
+  const EntityListPage({super.key, required this.title, required this.provider, required this.singular});
 
   @override
   ConsumerState<EntityListPage> createState() => _EntityListPageState();
@@ -24,186 +19,99 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
 
   String get _asset {
     switch (widget.title) {
-      case 'Cenas':
-        return 'assets/illustrations/example-cenas.svg';
-      case 'Produtos':
-        return 'assets/illustrations/example-produtos.svg';
-      case 'Ofertas':
-        return 'assets/illustrations/example-ofertas.svg';
-      case 'Transmissões':
-        return 'assets/illustrations/example-transmissoes.svg';
-      case 'Overlays':
-        return 'assets/illustrations/example-overlays.svg';
-      default:
-        return 'assets/images/example.jpg';
+      case 'Cenas': return 'assets/illustrations/example-cenas.svg';
+      case 'Produtos': return 'assets/illustrations/example-produtos.svg';
+      case 'Ofertas': return 'assets/illustrations/example-ofertas.svg';
+      case 'Transmissões': return 'assets/illustrations/example-transmissoes.svg';
+      case 'Overlays': return 'assets/illustrations/example-overlays.svg';
+      default: return 'assets/images/example.jpg';
     }
   }
 
-  Widget _visual({required double width, required double height}) {
-    final isSvg = _asset.toLowerCase().endsWith('.svg');
-    return isSvg
-        ? SvgPicture.asset(_asset, width: width, height: height, fit: BoxFit.cover)
-        : Image.asset(_asset, width: width, height: height, fit: BoxFit.cover);
+  List<String> get _fields {
+    switch (widget.title) {
+      case 'Produtos': return ['SKU', 'Preço', 'Preço promocional', 'Estoque'];
+      case 'Ofertas': return ['Preço original', 'Preço promocional', 'Início', 'Fim', 'Status'];
+      case 'Transmissões': return ['Data/hora', 'Status', 'Cena', 'Duração'];
+      case 'Overlays': return ['Tipo', 'Posição', 'Visibilidade'];
+      default: return ['Descrição', 'Tipo', 'Duração'];
+    }
+  }
+
+  String _key(String label) => const {
+    'SKU': 'sku', 'Preço': 'price', 'Preço promocional': 'promoPrice', 'Estoque': 'stock',
+    'Preço original': 'originalPrice', 'Início': 'start', 'Fim': 'end', 'Status': 'status',
+    'Data/hora': 'schedule', 'Cena': 'scene', 'Duração': 'duration', 'Tipo': 'type',
+    'Posição': 'position', 'Visibilidade': 'visible', 'Descrição': 'description',
+  }[label] ?? label;
+
+  Widget _visual(String asset) => asset.endsWith('.svg') ? SvgPicture.asset(asset, fit: BoxFit.cover) : Image.asset(asset, fit: BoxFit.cover);
+
+  Future<LiveRecord?> _editDialog({LiveRecord? initial}) async {
+    final name = TextEditingController(text: initial?.name ?? '');
+    final controllers = {for (final field in _fields) _key(field): TextEditingController(text: '${initial?.data[_key(field)] ?? ''}')};
+    bool active = initial?.active ?? true;
+    final result = await showDialog<LiveRecord>(
+      context: context,
+      builder: (context) => StatefulBuilder(builder: (context, setState) => AlertDialog(
+        title: Text(initial == null ? 'Novo ${widget.singular}' : 'Editar ${widget.singular}'),
+        content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: name, decoration: InputDecoration(labelText: widget.singular)),
+          const SizedBox(height: 10),
+          ...controllers.entries.map((e) => Padding(padding: const EdgeInsets.only(bottom: 10), child: TextField(controller: e.value, decoration: InputDecoration(labelText: e.key)))),
+          SwitchListTile.adaptive(title: const Text('Ativo'), value: active, onChanged: (v) => setState(() => active = v)),
+        ])),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.pop(context, LiveRecord(
+            id: initial?.id ?? 'rec-${DateTime.now().microsecondsSinceEpoch}',
+            name: name.text.trim(), active: active, imageAsset: initial?.imageAsset ?? _asset,
+            data: {for (final e in controllers.entries) e.key: e.value.text.trim()},
+          )), child: const Text('Salvar')),
+        ],
+      )),
+    );
+    for (final c in controllers.values) { c.dispose(); }
+    name.dispose();
+    return result;
   }
 
   @override
-  void dispose() {
-    _search.dispose();
-    super.dispose();
-  }
-
-  Future<String?> _nameDialog({String? initial}) async {
-    final controller = TextEditingController(text: initial ?? '');
-    return showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(initial == null ? 'Novo ${widget.singular}' : 'Editar ${widget.singular}'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(labelText: widget.singular),
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => Navigator.pop(context, controller.text.trim()),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Salvar')),
-        ],
-      ),
-    );
-  }
-
-  List<String> _filtered(List<String> items) {
-    final query = _search.text.trim().toLowerCase();
-    if (query.isEmpty) return items;
-    return items.where((item) => item.toLowerCase().contains(query)).toList();
-  }
+  void dispose() { _search.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
     final items = ref.watch(widget.provider);
-    final filtered = _filtered(items);
-
+    final q = _search.text.trim().toLowerCase();
+    final filtered = q.isEmpty ? items : items.where((r) => '${r.name} ${r.data.values.join(' ')}'.toLowerCase().contains(q)).toList();
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        actions: [
-          IconButton(
-            tooltip: 'Restaurar dados de demonstração',
-            icon: const Icon(Icons.restore_outlined),
-            onPressed: () => ref.read(widget.provider.notifier).resetToSeed(),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final value = await _nameDialog();
-          if (value != null && value.isNotEmpty) {
-            await ref.read(widget.provider.notifier).addItem(value);
-          }
-        },
-        icon: const Icon(Icons.add),
-        label: Text('Novo ${widget.singular}'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-        children: [
-          Card(
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  height: 220,
-                  child: _visual(width: double.infinity, height: 220),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.visibility_outlined),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Exemplo de utilização — ${widget.title}',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _search,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search),
-              hintText: 'Pesquisar ${widget.title.toLowerCase()}...',
-              suffixIcon: _search.text.isEmpty
-                  ? null
-                  : IconButton(
-                      onPressed: () {
-                        _search.clear();
-                        setState(() {});
-                      },
-                      icon: const Icon(Icons.clear),
-                    ),
-              border: const OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 14),
-          if (filtered.isEmpty)
-            SizedBox(
-              height: 220,
-              child: Center(child: Text(items.isEmpty ? 'Nenhum item cadastrado.' : 'Nenhum resultado encontrado.')),
-            )
-          else
-            ...List.generate(filtered.length, (visibleIndex) {
-              final value = filtered[visibleIndex];
-              final originalIndex = items.indexOf(value);
-              return Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: _visual(width: 72, height: 56),
-                  ),
-                  title: Text(value),
-                  subtitle: Text('Exemplo de uso em ${widget.title}'),
-                  trailing: PopupMenuButton<String>(
-                    onSelected: (action) async {
-                      final notifier = ref.read(widget.provider.notifier);
-                      switch (action) {
-                        case 'edit':
-                          final edited = await _nameDialog(initial: value);
-                          if (edited != null && edited.isNotEmpty) {
-                            await notifier.replaceAt(originalIndex, edited);
-                          }
-                          break;
-                        case 'duplicate':
-                          await notifier.addItem('$value (cópia)');
-                          break;
-                        case 'delete':
-                          await notifier.deleteAt(originalIndex);
-                          break;
-                      }
-                    },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(value: 'edit', child: Text('Editar')),
-                      PopupMenuItem(value: 'duplicate', child: Text('Duplicar')),
-                      PopupMenuItem(value: 'delete', child: Text('Excluir')),
-                    ],
-                  ),
-                ),
-              );
-            }),
-        ],
-      ),
+      appBar: AppBar(title: Text(widget.title), actions: [IconButton(onPressed: () => ref.read(widget.provider.notifier).resetToSeed(), icon: const Icon(Icons.restore_outlined), tooltip: 'Restaurar exemplos')]),
+      floatingActionButton: FloatingActionButton.extended(onPressed: () async { final r = await _editDialog(); if (r != null && r.name.isNotEmpty) await ref.read(widget.provider.notifier).addItem(r); }, icon: const Icon(Icons.add), label: Text('Novo ${widget.singular}')),
+      body: ListView(padding: const EdgeInsets.fromLTRB(20,16,20,100), children: [
+        Card(clipBehavior: Clip.antiAlias, child: Column(children: [SizedBox(height: 220, width: double.infinity, child: _visual(_asset)), Padding(padding: const EdgeInsets.all(16), child: Row(children: [const Icon(Icons.visibility_outlined), const SizedBox(width: 10), Expanded(child: Text('Exemplo de utilização — ${widget.title}', style: Theme.of(context).textTheme.titleMedium))]))])),
+        const SizedBox(height: 16),
+        TextField(controller: _search, onChanged: (_) => setState(() {}), decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: 'Pesquisar...', border: const OutlineInputBorder())),
+        const SizedBox(height: 14),
+        if (filtered.isEmpty) const SizedBox(height: 200, child: Center(child: Text('Nenhum item encontrado.')))
+        else ...filtered.map((record) => Card(margin: const EdgeInsets.only(bottom: 10), child: ListTile(
+          leading: ClipRRect(borderRadius: BorderRadius.circular(10), child: SizedBox(width: 72, height: 56, child: _visual(record.imageAsset))),
+          title: Text(record.name),
+          subtitle: Text(record.data.entries.map((e) => '${e.key}: ${e.value}').join(' • ')),
+          trailing: PopupMenuButton<String>(onSelected: (action) async {
+            final notifier = ref.read(widget.provider.notifier);
+            final index = items.indexWhere((r) => r.id == record.id);
+            if (action == 'edit') { final r = await _editDialog(initial: record); if (r != null) await notifier.replaceAt(index, r); }
+            if (action == 'duplicate') { await notifier.addItem(record.copyWith(id: 'copy-${DateTime.now().microsecondsSinceEpoch}', name: '${record.name} (cópia)')); }
+            if (action == 'toggle') await notifier.toggleAt(index);
+            if (action == 'delete') await notifier.deleteAt(index);
+          }, itemBuilder: (_) => const [
+            PopupMenuItem(value: 'edit', child: Text('Editar')),
+            PopupMenuItem(value: 'duplicate', child: Text('Duplicar')),
+            PopupMenuItem(value: 'toggle', child: Text('Ativar / desativar')),
+            PopupMenuItem(value: 'delete', child: Text('Excluir')),
+          ]),
+        ))),
+      ]),
     );
   }
 }
