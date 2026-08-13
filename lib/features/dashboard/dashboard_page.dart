@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../scenes/scenes_page.dart';
 import '../products/products_page.dart';
 import '../offers/offers_page.dart';
@@ -88,7 +89,7 @@ class DashboardPage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: 145, width: double.infinity, child: Image.asset(module.asset, fit: BoxFit.cover)),
+                      SizedBox(height: 145, width: double.infinity, child: _ModuleVisual(asset: module.asset)),
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
@@ -120,6 +121,19 @@ class DashboardPage extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+class _ModuleVisual extends StatelessWidget {
+  final String asset;
+  const _ModuleVisual({required this.asset});
+
+  @override
+  Widget build(BuildContext context) {
+    if (asset.toLowerCase().endsWith('.svg')) {
+      return SvgPicture.asset(asset, fit: BoxFit.cover, width: double.infinity, height: double.infinity);
+    }
+    return Image.asset(asset, fit: BoxFit.cover, width: double.infinity, height: double.infinity);
   }
 }
 
@@ -189,7 +203,7 @@ class _SummaryCard extends StatelessWidget {
           )),
           const Divider(),
           const SizedBox(height: 8),
-          const Row(children: [Icon(Icons.circle, size: 12, color: Colors.green), SizedBox(width: 8), Expanded(child: Text('OBS NÃO CONECTADO')), Text('Preparado')]),
+          const Row(children: [Icon(Icons.circle, size: 12, color: Colors.grey), SizedBox(width: 8), Expanded(child: Text('OBS NÃO CONECTADO')), Text('Preparação')]),
         ]),
       ),
     );
