@@ -24,13 +24,13 @@ class DashboardPage extends ConsumerWidget {
     final transmissions = ref.watch(transmissionsProvider);
     final overlays = ref.watch(overlaysProvider);
 
-    final modules = <({String title, String description, IconData icon, Widget page, int count})>[
-      (title: 'Cenas', description: 'Organize as cenas da sua transmissão', icon: Icons.layers_outlined, page: const ScenesPage(), count: scenes.length),
-      (title: 'Produtos', description: 'Catálogo, preços e estoque', icon: Icons.inventory_2_outlined, page: const ProductsPage(), count: products.length),
-      (title: 'Ofertas', description: 'Promoções e campanhas ativas', icon: Icons.local_offer_outlined, page: const OffersPage(), count: offers.length),
-      (title: 'Transmissões', description: 'Agenda e controle das lives', icon: Icons.live_tv_outlined, page: const TransmissionsPage(), count: transmissions.length),
-      (title: 'Overlays', description: 'Elementos visuais da live', icon: Icons.dashboard_customize_outlined, page: const OverlaysPage(), count: overlays.length),
-      (title: 'Mídia', description: 'Imagens, logos e biblioteca', icon: Icons.perm_media_outlined, page: const MediaLibrary(), count: 3),
+    final modules = <({String title, String description, IconData icon, Widget page, int count, String asset})>[
+      (title: 'Cenas', description: 'Organize as cenas da sua transmissão', icon: Icons.layers_outlined, page: const ScenesPage(), count: scenes.length, asset: 'assets/illustrations/example-cenas.svg'),
+      (title: 'Produtos', description: 'Catálogo, preços e estoque', icon: Icons.inventory_2_outlined, page: const ProductsPage(), count: products.length, asset: 'assets/illustrations/example-produtos.svg'),
+      (title: 'Ofertas', description: 'Promoções e campanhas ativas', icon: Icons.local_offer_outlined, page: const OffersPage(), count: offers.length, asset: 'assets/illustrations/example-ofertas.svg'),
+      (title: 'Transmissões', description: 'Agenda e controle das lives', icon: Icons.live_tv_outlined, page: const TransmissionsPage(), count: transmissions.length, asset: 'assets/illustrations/example-transmissoes.svg'),
+      (title: 'Overlays', description: 'Elementos visuais da live', icon: Icons.dashboard_customize_outlined, page: const OverlaysPage(), count: overlays.length, asset: 'assets/illustrations/example-overlays.svg'),
+      (title: 'Mídia', description: 'Imagens, logos e biblioteca', icon: Icons.perm_media_outlined, page: const MediaLibrary(), count: 8, asset: 'assets/images/example.jpg'),
     ];
 
     return Scaffold(
@@ -51,13 +51,11 @@ class DashboardPage extends ConsumerWidget {
             builder: (context, constraints) {
               final compact = constraints.maxWidth < 760;
               return compact
-                  ? Column(
-                      children: [
-                        _LivePreviewCard(onOpen: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TransmissionsPage()))),
-                        const SizedBox(height: 16),
-                        _SummaryCard(counts: [scenes.length, products.length, offers.length, transmissions.length]),
-                      ],
-                    )
+                  ? Column(children: [
+                      _LivePreviewCard(onOpen: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TransmissionsPage()))),
+                      const SizedBox(height: 16),
+                      _SummaryCard(counts: [scenes.length, products.length, offers.length, transmissions.length]),
+                    ])
                   : Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -75,8 +73,8 @@ class DashboardPage extends ConsumerWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 340,
-              mainAxisExtent: 190,
+              maxCrossAxisExtent: 360,
+              mainAxisExtent: 300,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
             ),
@@ -87,26 +85,33 @@ class DashboardPage extends ConsumerWidget {
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
                   onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => module.page)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(children: [
-                          Icon(module.icon, size: 30),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                            decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(20)),
-                            child: Text('${module.count}'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(height: 145, width: double.infinity, child: Image.asset(module.asset, fit: BoxFit.cover)),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(children: [
+                                Icon(module.icon, size: 24),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text(module.title, style: Theme.of(context).textTheme.titleLarge)),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                                  decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(20)),
+                                  child: Text('${module.count}'),
+                                ),
+                              ]),
+                              const SizedBox(height: 6),
+                              Text(module.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodyMedium),
+                            ],
                           ),
-                        ]),
-                        const SizedBox(height: 12),
-                        Text(module.title, style: Theme.of(context).textTheme.titleLarge),
-                        const SizedBox(height: 5),
-                        Text(module.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodyMedium),
-                      ],
-                    ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -134,11 +139,7 @@ class _LivePreviewCard extends StatelessWidget {
             Image.asset('assets/images/example.jpg', fit: BoxFit.cover),
             DecoratedBox(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.black.withOpacity(0.05), Colors.black.withOpacity(0.80)],
-                ),
+                gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withOpacity(0.05), Colors.black.withOpacity(0.80)]),
               ),
             ),
             Padding(
@@ -179,20 +180,17 @@ class _SummaryCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Resumo rápido', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
-            ...List.generate(labels.length, (index) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(children: [Icon(icons[index], size: 22), const SizedBox(width: 10), Expanded(child: Text(labels[index])), Text('${counts[index]}', style: Theme.of(context).textTheme.titleMedium)]),
-            )),
-            const Divider(),
-            const SizedBox(height: 8),
-            const Row(children: [Icon(Icons.circle, size: 12, color: Colors.green), SizedBox(width: 8), Expanded(child: Text('OBS NÃO CONECTADO')), Text('Preparado')]),
-          ],
-        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Resumo rápido', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 16),
+          ...List.generate(labels.length, (index) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(children: [Icon(icons[index], size: 22), const SizedBox(width: 10), Expanded(child: Text(labels[index])), Text('${counts[index]}', style: Theme.of(context).textTheme.titleMedium)]),
+          )),
+          const Divider(),
+          const SizedBox(height: 8),
+          const Row(children: [Icon(Icons.circle, size: 12, color: Colors.green), SizedBox(width: 8), Expanded(child: Text('OBS NÃO CONECTADO')), Text('Preparado')]),
+        ]),
       ),
     );
   }
