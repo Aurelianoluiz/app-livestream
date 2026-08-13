@@ -21,6 +21,23 @@ class EntityListPage extends ConsumerStatefulWidget {
 class _EntityListPageState extends ConsumerState<EntityListPage> {
   final _search = TextEditingController();
 
+  String get _asset {
+    switch (widget.title) {
+      case 'Cenas':
+        return 'assets/illustrations/example-cenas.svg';
+      case 'Produtos':
+        return 'assets/illustrations/example-produtos.svg';
+      case 'Ofertas':
+        return 'assets/illustrations/example-ofertas.svg';
+      case 'Transmissões':
+        return 'assets/illustrations/example-transmissoes.svg';
+      case 'Overlays':
+        return 'assets/illustrations/example-overlays.svg';
+      default:
+        return 'assets/images/example.jpg';
+    }
+  }
+
   @override
   void dispose() {
     _search.dispose();
@@ -80,63 +97,90 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
         icon: const Icon(Icons.add),
         label: Text('Novo ${widget.singular}'),
       ),
-      body: Column(
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-            child: TextField(
-              controller: _search,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.search),
-                hintText: 'Pesquisar ${widget.title.toLowerCase()}...',
-                suffixIcon: _search.text.isEmpty ? null : IconButton(onPressed: () { _search.clear(); setState(() {}); }, icon: const Icon(Icons.clear)),
-                border: const OutlineInputBorder(),
-              ),
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  height: 220,
+                  child: Image.asset(_asset, fit: BoxFit.cover),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.visibility_outlined),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Exemplo de utilização — ${widget.title}',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          Expanded(
-            child: filtered.isEmpty
-                ? Center(child: Text(items.isEmpty ? 'Nenhum item cadastrado.' : 'Nenhum resultado encontrado.'))
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, visibleIndex) {
-                      final value = filtered[visibleIndex];
-                      final originalIndex = items.indexOf(value);
-                      return Card(
-                        child: ListTile(
-                          leading: CircleAvatar(child: Text('${visibleIndex + 1}')),
-                          title: Text(value),
-                          subtitle: const Text('Persistido localmente no dispositivo'),
-                          trailing: PopupMenuButton<String>(
-                            onSelected: (action) async {
-                              final notifier = ref.read(widget.provider.notifier);
-                              switch (action) {
-                                case 'edit':
-                                  final edited = await _nameDialog(initial: value);
-                                  if (edited != null && edited.isNotEmpty) await notifier.replaceAt(originalIndex, edited);
-                                  break;
-                                case 'duplicate':
-                                  await notifier.addItem('$value (cópia)');
-                                  break;
-                                case 'delete':
-                                  await notifier.deleteAt(originalIndex);
-                                  break;
-                              }
-                            },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(value: 'edit', child: Text('Editar')),
-                              PopupMenuItem(value: 'duplicate', child: Text('Duplicar')),
-                              PopupMenuItem(value: 'delete', child: Text('Excluir')),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _search,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search),
+              hintText: 'Pesquisar ${widget.title.toLowerCase()}...',
+              suffixIcon: _search.text.isEmpty ? null : IconButton(onPressed: () { _search.clear(); setState(() {}); }, icon: const Icon(Icons.clear)),
+              border: const OutlineInputBorder(),
+            ),
           ),
+          const SizedBox(height: 14),
+          if (filtered.isEmpty)
+            SizedBox(height: 220, child: Center(child: Text(items.isEmpty ? 'Nenhum item cadastrado.' : 'Nenhum resultado encontrado.')))
+          else
+            ...List.generate(filtered.length, (visibleIndex) {
+              final value = filtered[visibleIndex];
+              final originalIndex = items.indexOf(value);
+              return Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.asset(_asset, width: 72, height: 56, fit: BoxFit.cover),
+                  ),
+                  title: Text(value),
+                  subtitle: Text('Exemplo de uso em ${widget.title}'),
+                  trailing: PopupMenuButton<String>(
+                    onSelected: (action) async {
+                      final notifier = ref.read(widget.provider.notifier);
+                      switch (action) {
+                        case 'edit':
+                          final edited = await _nameDialog(initial: value);
+                          if (edited != null && edited.isNotEmpty) await notifier.replaceAt(originalIndex, edited);
+                          break;
+                        case 'duplicate':
+                          await notifier.addItem('$value (cópia)');
+                          break;
+                        case 'delete':
+                          await notifier.deleteAt(originalIndex);
+                          break;
+                      }
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'edit', child: Text('Editar')),
+                      PopupMenuItem(value: 'duplicate', child: Text('Duplicar')),
+                      PopupMenuItem(value: 'delete', child: Text('Excluir')),
+                    ],
+                  ),
+                ),
+              );
+            }),
         ],
       ),
     );
