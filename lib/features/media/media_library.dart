@@ -6,30 +6,29 @@ class MediaLibrary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const items = [
-      ('Exemplo de Live', 'assets/images/example.jpg', Icons.live_tv_outlined),
-      ('Logo principal', 'assets/branding/logo.svg', Icons.branding_watermark_outlined),
-      ('Logo reduzida', 'assets/branding/logo-small.svg', Icons.crop_free_outlined),
+      ('Exemplo de Live', 'assets/images/example.jpg', 'Foto/preview principal'),
+      ('Exemplo — Cenas', 'assets/illustrations/example-cenas.svg', 'Cena com câmera, produto e oferta'),
+      ('Exemplo — Produtos', 'assets/illustrations/example-produtos.svg', 'Catálogo visual com preços e estoque'),
+      ('Exemplo — Ofertas', 'assets/illustrations/example-ofertas.svg', 'Banner de promoção durante a Live'),
+      ('Exemplo — Transmissões', 'assets/illustrations/example-transmissoes.svg', 'Agenda e status da transmissão'),
+      ('Exemplo — Overlays', 'assets/illustrations/example-overlays.svg', 'Overlay aplicado na transmissão'),
+      ('Logo principal', 'assets/branding/logo.svg', 'Identidade LIVE STUDIO ASR'),
+      ('Logo reduzida', 'assets/branding/logo-small.svg', 'Versão compacta da marca'),
     ];
 
     return Scaffold(
       appBar: AppBar(title: const Text('Biblioteca de mídia')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {},
-        icon: const Icon(Icons.upload_file_outlined),
-        label: const Text('Adicionar mídia'),
-      ),
       body: GridView.builder(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 320,
-          mainAxisExtent: 250,
+          maxCrossAxisExtent: 340,
+          mainAxisExtent: 285,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
         ),
         itemCount: items.length,
         itemBuilder: (context, index) {
           final item = items[index];
-          final isSvg = item.$2.endsWith('.svg');
           return Card(
             clipBehavior: Clip.antiAlias,
             child: Column(
@@ -39,18 +38,17 @@ class MediaLibrary extends StatelessWidget {
                   child: Container(
                     width: double.infinity,
                     color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    padding: const EdgeInsets.all(16),
-                    child: isSvg
-                        ? Center(child: Icon(item.$3, size: 54))
-                        : Image.asset(item.$2, fit: BoxFit.cover),
+                    child: Image.asset(item.$2, fit: BoxFit.cover),
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(child: Text(item.$1, style: Theme.of(context).textTheme.titleMedium)),
-                      const Icon(Icons.more_horiz),
+                      Text(item.$1, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 4),
+                      Text(item.$3, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall),
                     ],
                   ),
                 ),
@@ -58,6 +56,11 @@ class MediaLibrary extends StatelessWidget {
             ),
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {},
+        icon: const Icon(Icons.upload_file_outlined),
+        label: const Text('Adicionar mídia'),
       ),
     );
   }
