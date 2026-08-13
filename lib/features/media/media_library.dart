@@ -1,21 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class MediaLibrary extends StatelessWidget {
   const MediaLibrary({super.key});
 
+  static const items = [
+    ('Exemplo de Live', 'assets/images/example.jpg', 'Foto/preview principal'),
+    ('Exemplo — Cenas', 'assets/illustrations/example-cenas.svg', 'Cena com câmera, produto e oferta'),
+    ('Exemplo — Produtos', 'assets/illustrations/example-produtos.svg', 'Catálogo visual com preços e estoque'),
+    ('Exemplo — Ofertas', 'assets/illustrations/example-ofertas.svg', 'Banner de promoção durante a Live'),
+    ('Exemplo — Transmissões', 'assets/illustrations/example-transmissoes.svg', 'Agenda e status da transmissão'),
+    ('Exemplo — Overlays', 'assets/illustrations/example-overlays.svg', 'Overlay aplicado na transmissão'),
+    ('Logo principal', 'assets/branding/logo.svg', 'Identidade LIVE STUDIO ASR'),
+    ('Logo reduzida', 'assets/branding/logo-small.svg', 'Versão compacta da marca'),
+  ];
+
+  Widget _visual(String path) {
+    if (path.toLowerCase().endsWith('.svg')) {
+      return SvgPicture.asset(path, fit: BoxFit.contain);
+    }
+    return Image.asset(path, fit: BoxFit.cover);
+  }
+
   @override
   Widget build(BuildContext context) {
-    const items = [
-      ('Exemplo de Live', 'assets/images/example.jpg', 'Foto/preview principal'),
-      ('Exemplo — Cenas', 'assets/illustrations/example-cenas.svg', 'Cena com câmera, produto e oferta'),
-      ('Exemplo — Produtos', 'assets/illustrations/example-produtos.svg', 'Catálogo visual com preços e estoque'),
-      ('Exemplo — Ofertas', 'assets/illustrations/example-ofertas.svg', 'Banner de promoção durante a Live'),
-      ('Exemplo — Transmissões', 'assets/illustrations/example-transmissoes.svg', 'Agenda e status da transmissão'),
-      ('Exemplo — Overlays', 'assets/illustrations/example-overlays.svg', 'Overlay aplicado na transmissão'),
-      ('Logo principal', 'assets/branding/logo.svg', 'Identidade LIVE STUDIO ASR'),
-      ('Logo reduzida', 'assets/branding/logo-small.svg', 'Versão compacta da marca'),
-    ];
-
     return Scaffold(
       appBar: AppBar(title: const Text('Biblioteca de mídia')),
       body: GridView.builder(
@@ -38,7 +46,8 @@ class MediaLibrary extends StatelessWidget {
                   child: Container(
                     width: double.infinity,
                     color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    child: Image.asset(item.$2, fit: BoxFit.cover),
+                    padding: const EdgeInsets.all(12),
+                    child: _visual(item.$2),
                   ),
                 ),
                 Padding(
