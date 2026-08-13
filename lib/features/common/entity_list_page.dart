@@ -38,12 +38,25 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
     }
   }
 
-  String _key(String label) => const {
-    'SKU': 'sku', 'Preço': 'price', 'Preço promocional': 'promoPrice', 'Estoque': 'stock',
-    'Preço original': 'originalPrice', 'Início': 'start', 'Fim': 'end', 'Status': 'status',
-    'Data/hora': 'schedule', 'Cena': 'scene', 'Duração': 'duration', 'Tipo': 'type',
-    'Posição': 'position', 'Visibilidade': 'visible', 'Descrição': 'description',
-  }[label] ?? label;
+  String _key(String label) {
+    switch (label) {
+      case 'SKU': return 'sku';
+      case 'Preço': return 'price';
+      case 'Preço promocional': return 'promoPrice';
+      case 'Estoque': return 'stock';
+      case 'Preço original': return 'originalPrice';
+      case 'Início': return 'start';
+      case 'Fim': return 'end';
+      case 'Status': return 'status';
+      case 'Data/hora': return 'schedule';
+      case 'Cena': return 'scene';
+      case 'Duração': return 'duration';
+      case 'Tipo': return 'type';
+      case 'Posição': return 'position';
+      case 'Visibilidade': return 'visible';
+      default: return 'description';
+    }
+  }
 
   Widget _visual(String asset) => asset.endsWith('.svg') ? SvgPicture.asset(asset, fit: BoxFit.cover) : Image.asset(asset, fit: BoxFit.cover);
 
@@ -71,9 +84,16 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
         ],
       )),
     );
-    for (final c in controllers.values) { c.dispose(); }
+    for (final c in controllers.values) c.dispose();
     name.dispose();
     return result;
+  }
+
+  Future<void> _setTransmissionStatus(LiveRecord record, String status) async {
+    final index = ref.read(widget.provider).indexWhere((r) => r.id == record.id);
+    if (index < 0) return;
+    final nextData = Map<String, dynamic>.from(record.data)..['status'] = status;
+    await ref.read(widget.provider.notifier).replaceAt(index, record.copyWith(data: nextData, active: status != 'finished'));
   }
 
   @override
@@ -97,21 +117,28 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
           leading: ClipRRect(borderRadius: BorderRadius.circular(10), child: SizedBox(width: 72, height: 56, child: _visual(record.imageAsset))),
           title: Text(record.name),
           subtitle: Text(record.data.entries.map((e) => '${e.key}: ${e.value}').join(' • ')),
-          trailing: PopupMenuButton<String>(onSelected: (action) async {
-            final notifier = ref.read(widget.provider.notifier);
-            final index = items.indexWhere((r) => r.id == record.id);
-            if (action == 'edit') { final r = await _editDialog(initial: record); if (r != null) await notifier.replaceAt(index, r); }
-            if (action == 'duplicate') { await notifier.addItem(record.copyWith(id: 'copy-${DateTime.now().microsecondsSinceEpoch}', name: '${record.name} (cópia)')); }
-            if (action == 'toggle') await notifier.toggleAt(index);
-            if (action == 'delete') await notifier.deleteAt(index);
-          }, itemBuilder: (_) => const [
-            PopupMenuItem(value: 'edit', child: Text('Editar')),
-            PopupMenuItem(value: 'duplicate', child: Text('Duplicar')),
-            PopupMenuItem(value: 'toggle', child: Text('Ativar / desativar')),
-            PopupMenuItem(value: 'delete', child: Text('Excluir')),
+          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (widget.title == 'Transmissões') ...[
+              IconButton(tooltip: 'Iniciar', onPressed: () => _setTransmissionStatus(record, 'running'), icon: const Icon(Icons.play_arrow)),
+              IconButton(tooltip: 'Pausar', onPressed: () => _setTransmissionStatus(record, 'paused'), icon: const Icon(Icons.pause)),
+              IconButton(tooltip: 'Finalizar', onPressed: () => _setTransmissionStatus(record, 'finished'), icon: const Icon(Icons.stop)),
+            ],
+            PopupMenuButton<String>(onSelected: (action) async {
+              final notifier = ref.read(widget.provider.notifier);
+              final index = items.indexWhere((r) => r.id == record.id);
+              if (action == 'edit') { final r = await _editDialog(initial: record); if (r != null) await notifier.replaceAt(index, r); }
+              if (action == 'duplicate') await notifier.addItem(record.copyWith(id: 'copy-${DateTime.now().microsecondsSinceEpoch}', name: '${record.name} (cópia)'));
+              if (action == 'toggle') await notifier.toggleAt(index);
+              if (action == 'delete') await notifier.deleteAt(index);
+            }, itemBuilder: (_) => const [
+              PopupMenuItem(value: 'edit', child: Text('Editar')),
+              PopupMenuItem(value: 'duplicate', child: Text('Duplicar')),
+              PopupMenuItem(value: 'toggle', child: Text('Ativar / desativar')),
+              PopupMenuItem(value: 'delete', child: Text('Excluir')),
+            ]),
           ]),
-        ))),
-      ]),
+        )))],
+      ),
     );
   }
 }
