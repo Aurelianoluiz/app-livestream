@@ -17,6 +17,13 @@ import '../../providers/overlays_provider.dart';
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
+  Widget _moduleVisual(BuildContext context, String asset) {
+    if (asset.toLowerCase().endsWith('.svg')) {
+      return SvgPicture.asset(asset, fit: BoxFit.cover);
+    }
+    return Image.asset(asset, fit: BoxFit.cover);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scenes = ref.watch(scenesProvider);
@@ -89,25 +96,32 @@ class DashboardPage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: 145, width: double.infinity, child: _ModuleVisual(asset: module.asset)),
+                      SizedBox(height: 145, width: double.infinity, child: _moduleVisual(context, module.asset)),
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-                          child: Column(
+                          child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(children: [
-                                Icon(module.icon, size: 24),
-                                const SizedBox(width: 8),
-                                Expanded(child: Text(module.title, style: Theme.of(context).textTheme.titleLarge)),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                                  decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(20)),
-                                  child: Text('${module.count}'),
+                              Icon(module.icon, size: 24),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(children: [
+                                      Expanded(child: Text(module.title, style: Theme.of(context).textTheme.titleLarge)),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                                        decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(20)),
+                                        child: Text('${module.count}'),
+                                      ),
+                                    ]),
+                                    const SizedBox(height: 6),
+                                    Text(module.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodyMedium),
+                                  ],
                                 ),
-                              ]),
-                              const SizedBox(height: 6),
-                              Text(module.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodyMedium),
+                              ),
                             ],
                           ),
                         ),
@@ -121,19 +135,6 @@ class DashboardPage extends ConsumerWidget {
         ],
       ),
     );
-  }
-}
-
-class _ModuleVisual extends StatelessWidget {
-  final String asset;
-  const _ModuleVisual({required this.asset});
-
-  @override
-  Widget build(BuildContext context) {
-    if (asset.toLowerCase().endsWith('.svg')) {
-      return SvgPicture.asset(asset, fit: BoxFit.cover, width: double.infinity, height: double.infinity);
-    }
-    return Image.asset(asset, fit: BoxFit.cover, width: double.infinity, height: double.infinity);
   }
 }
 
@@ -203,7 +204,7 @@ class _SummaryCard extends StatelessWidget {
           )),
           const Divider(),
           const SizedBox(height: 8),
-          const Row(children: [Icon(Icons.circle, size: 12, color: Colors.grey), SizedBox(width: 8), Expanded(child: Text('OBS NÃO CONECTADO')), Text('Preparação')]),
+          const Row(children: [Icon(Icons.circle, size: 12, color: Colors.green), SizedBox(width: 8), Expanded(child: Text('OBS NÃO CONECTADO')), Text('Preparado')]),
         ]),
       ),
     );
