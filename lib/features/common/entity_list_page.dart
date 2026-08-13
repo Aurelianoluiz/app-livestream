@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../providers/demo_list_provider.dart';
 
 class EntityListPage extends ConsumerStatefulWidget {
@@ -36,6 +37,13 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
       default:
         return 'assets/images/example.jpg';
     }
+  }
+
+  Widget _visual({required double width, required double height}) {
+    final isSvg = _asset.toLowerCase().endsWith('.svg');
+    return isSvg
+        ? SvgPicture.asset(_asset, width: width, height: height, fit: BoxFit.cover)
+        : Image.asset(_asset, width: width, height: height, fit: BoxFit.cover);
   }
 
   @override
@@ -108,7 +116,7 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
                 SizedBox(
                   width: double.infinity,
                   height: 220,
-                  child: Image.asset(_asset, fit: BoxFit.cover),
+                  child: _visual(width: double.infinity, height: 220),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
@@ -135,13 +143,24 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.search),
               hintText: 'Pesquisar ${widget.title.toLowerCase()}...',
-              suffixIcon: _search.text.isEmpty ? null : IconButton(onPressed: () { _search.clear(); setState(() {}); }, icon: const Icon(Icons.clear)),
+              suffixIcon: _search.text.isEmpty
+                  ? null
+                  : IconButton(
+                      onPressed: () {
+                        _search.clear();
+                        setState(() {});
+                      },
+                      icon: const Icon(Icons.clear),
+                    ),
               border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 14),
           if (filtered.isEmpty)
-            SizedBox(height: 220, child: Center(child: Text(items.isEmpty ? 'Nenhum item cadastrado.' : 'Nenhum resultado encontrado.')))
+            SizedBox(
+              height: 220,
+              child: Center(child: Text(items.isEmpty ? 'Nenhum item cadastrado.' : 'Nenhum resultado encontrado.')),
+            )
           else
             ...List.generate(filtered.length, (visibleIndex) {
               final value = filtered[visibleIndex];
@@ -152,7 +171,7 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   leading: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
-                    child: Image.asset(_asset, width: 72, height: 56, fit: BoxFit.cover),
+                    child: _visual(width: 72, height: 56),
                   ),
                   title: Text(value),
                   subtitle: Text('Exemplo de uso em ${widget.title}'),
@@ -162,7 +181,9 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
                       switch (action) {
                         case 'edit':
                           final edited = await _nameDialog(initial: value);
-                          if (edited != null && edited.isNotEmpty) await notifier.replaceAt(originalIndex, edited);
+                          if (edited != null && edited.isNotEmpty) {
+                            await notifier.replaceAt(originalIndex, edited);
+                          }
                           break;
                         case 'duplicate':
                           await notifier.addItem('$value (cópia)');
