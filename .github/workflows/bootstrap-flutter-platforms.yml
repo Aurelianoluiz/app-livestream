@@ -1,0 +1,55 @@
+name: Bootstrap Flutter Platforms
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'android/**'
+      - 'web/**'
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: stable
+          cache: true
+
+      - name: Generate missing Flutter platforms
+        run: |
+          if [ ! -f android/settings.gradle ] || [ ! -f web/index.html ]; then
+            flutter create --platforms web,android --org com.asr.live_studio --project-name live_studio_asr .
+          else
+            echo 'Flutter platform scaffolding already exists.'
+          fi
+
+      - name: Remove generated sample test if present
+        run: rm -f test/widget_test.dart
+
+      - name: Align Android Kotlin plugin
+        run: |
+          if [ -f android/settings.gradle ]; then
+            sed -i '/org.jetbrains.kotlin.android/s/version "[^"]*"/version "1.9.24"/' android/settings.gradle
+          fi
+
+      - name: Commit generated platform files
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add android web
+          if git diff --cached --quiet; then
+            echo 'No platform files to commit.'
+            exit 0
+          fi
+          git commit -m 'chore: add Flutter web and Android platform scaffolding [skip ci]'
+          git push
