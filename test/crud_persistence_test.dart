@@ -9,7 +9,11 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(const ProviderScope(child: LiveStudioApp()));
-    await tester.pumpAndSettle();
+    // Avoid pumpAndSettle here because the app can keep framework animations
+    // or async persistence work alive. Advance enough frames for the initial
+    // dashboard and seeded data to render without waiting indefinitely.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('LIVE STUDIO ASR'), findsWidgets);
     expect(find.text('EXEMPLO DE LIVE'), findsOneWidget);
