@@ -40,15 +40,6 @@ class _TransmissionsPageState extends ConsumerState<TransmissionsPage> {
     return '$h:$m:$s';
   }
 
-  Color _statusColor(String status, ThemeData theme) {
-    switch (status) {
-      case 'running': return theme.colorScheme.primary;
-      case 'paused': return Colors.orange;
-      case 'finished': return theme.colorScheme.outline;
-      default: return theme.colorScheme.secondary;
-    }
-  }
-
   Future<void> _setStatus(LiveRecord record, String status) async {
     final items = ref.read(transmissionsProvider);
     final index = items.indexWhere((r) => r.id == record.id);
