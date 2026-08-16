@@ -6,13 +6,15 @@ class AuthService {
   static const _boxName = 'auth';
   static const _authenticatedKey = 'authenticated';
   static const _userKey = 'user';
+  static Future<void>? _initializing;
 
   // V1 local account. Replace with server-side authentication before production use.
   static const defaultUsername = 'admin@livestudioasr.com';
   static const defaultPassword = 'ASR@2026';
 
   Future<Box<String>> _box() async {
-    await Hive.initFlutter();
+    _initializing ??= Hive.initFlutter();
+    await _initializing!;
     if (Hive.isBoxOpen(_boxName)) return Hive.box<String>(_boxName);
     return Hive.openBox<String>(_boxName);
   }
