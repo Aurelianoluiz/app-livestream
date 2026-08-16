@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 
 class AuthService {
   static const _boxName = 'auth';
@@ -12,9 +13,18 @@ class AuthService {
   static const defaultUsername = 'admin@livestudioasr.com';
   static const defaultPassword = 'ASR@2026';
 
-  Future<Box<String>> _box() async {
+  static Future<void> initialize() {
     _initializing ??= Hive.initFlutter();
-    await _initializing!;
+    return _initializing!;
+  }
+
+  static Future<void> initializeForTest(String path) {
+    _initializing ??= Future<void>(() => Hive.init(path));
+    return _initializing!;
+  }
+
+  Future<Box<String>> _box() async {
+    await initialize();
     if (Hive.isBoxOpen(_boxName)) return Hive.box<String>(_boxName);
     return Hive.openBox<String>(_boxName);
   }
