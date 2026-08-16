@@ -8,6 +8,7 @@ import '../products/products_page.dart';
 import '../scenes/scenes_page.dart';
 import '../settings/settings_page.dart';
 import '../transmissions/transmissions_page.dart';
+import '../../providers/demo_list_provider.dart';
 import '../../providers/offers_provider.dart';
 import '../../providers/overlays_provider.dart';
 import '../../providers/products_provider.dart';
