@@ -33,6 +33,20 @@ class DashboardPage extends ConsumerWidget {
     final transmissions = ref.watch(transmissionsProvider);
     final overlays = ref.watch(overlaysProvider);
 
+    final current = transmissions.where((r) {
+      final status = '${r.data['status'] ?? ''}';
+      return status == 'running' || status == 'paused';
+    }).firstOrNull;
+    final runningCount = transmissions
+        .where((r) => '${r.data['status'] ?? ''}' == 'running')
+        .length;
+    final finishedCount = transmissions
+        .where((r) => '${r.data['status'] ?? ''}' == 'finished')
+        .length;
+    final pausedCount = transmissions
+        .where((r) => '${r.data['status'] ?? ''}' == 'paused')
+        .length;
+
     final modules = <({
       String title,
       String description,
@@ -99,6 +113,12 @@ class DashboardPage extends ConsumerWidget {
       );
     }
 
+    void openTransmissions() {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const TransmissionsPage()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('LIVE STUDIO ASR'),
@@ -117,9 +137,8 @@ class DashboardPage extends ConsumerWidget {
             builder: (context, constraints) {
               final compact = constraints.maxWidth < 760;
               final preview = _LivePreviewCard(
-                onOpen: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const TransmissionsPage()),
-                ),
+                current: current,
+                onOpen: openTransmissions,
               );
               final summary = _SummaryCard(
                 counts: [
@@ -128,6 +147,9 @@ class DashboardPage extends ConsumerWidget {
                   offers.length,
                   transmissions.length,
                 ],
+                running: runningCount,
+                paused: pausedCount,
+                finished: finishedCount,
               );
               return compact
                   ? Column(
@@ -142,6 +164,17 @@ class DashboardPage extends ConsumerWidget {
                       ],
                     );
             },
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Operação da live',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 12),
+          _QuickActionsCard(
+            current: current,
+            onOpenTransmissions: openTransmissions,
+            onOpenSettings: openSettings,
           ),
           const SizedBox(height: 24),
           Text(
@@ -239,11 +272,21 @@ class DashboardPage extends ConsumerWidget {
 }
 
 class _LivePreviewCard extends StatelessWidget {
+  final LiveRecord? current;
   final VoidCallback onOpen;
-  const _LivePreviewCard({required this.onOpen});
+  const _LivePreviewCard({required this.current, required this.onOpen});
 
   @override
   Widget build(BuildContext context) {
+    final active = current != null;
+    final paused = active && '${current!.data['status']}' == 'paused';
+    final title = active ? current!.name : 'Nenhuma live em operação';
+    final subtitle = active
+        ? (paused
+            ? 'A transmissão está pausada.'
+            : 'A transmissão está ao vivo.')
+        : 'Abra Transmissões para preparar ou iniciar uma live.';
+
     return Card(
       clipBehavior: Clip.antiAlias,
       child: SizedBox(
@@ -259,7 +302,7 @@ class _LivePreviewCard extends StatelessWidget {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.black.withOpacity(0.05),
-                    Colors.black.withOpacity(0.80),
+                    Colors.black.withOpacity(0.84),
                   ],
                 ),
               ),
@@ -276,30 +319,38 @@ class _LivePreviewCard extends StatelessWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
+                      color: active
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Text('EXEMPLO DE LIVE'),
+                    child: Text(
+                      active ? (paused ? 'LIVE PAUSADA' : 'AO VIVO') : 'PRONTO PARA LIVE',
+                      style: TextStyle(
+                        color: active ? Colors.white : Colors.black87,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 10),
-                  const Text(
-                    'LIVE STUDIO ASR',
-                    style: TextStyle(
+                  Text(
+                    title,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    'Pré-visualização da sua transmissão',
-                    style: TextStyle(color: Colors.white70),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.white70),
                   ),
                   const SizedBox(height: 14),
                   FilledButton.icon(
                     onPressed: onOpen,
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Abrir transmissões'),
+                    icon: Icon(active ? Icons.tune : Icons.play_arrow),
+                    label: Text(active ? 'Controlar transmissão' : 'Abrir transmissões'),
                   ),
                 ],
               ),
@@ -313,7 +364,15 @@ class _LivePreviewCard extends StatelessWidget {
 
 class _SummaryCard extends StatelessWidget {
   final List<int> counts;
-  const _SummaryCard({required this.counts});
+  final int running;
+  final int paused;
+  final int finished;
+  const _SummaryCard({
+    required this.counts,
+    required this.running,
+    required this.paused,
+    required this.finished,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -343,16 +402,19 @@ class _SummaryCard extends StatelessWidget {
                     Icon(icons[index], size: 22),
                     const SizedBox(width: 10),
                     Expanded(child: Text(labels[index])),
-                    Text(
-                      '${counts[index]}',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+                    Text('${counts[index]}', style: Theme.of(context).textTheme.titleMedium),
                   ],
                 ),
               ),
             ),
             const Divider(),
             const SizedBox(height: 8),
+            _StatusRow(label: 'Ao vivo', value: running, icon: Icons.live_tv, color: scheme.primary),
+            const SizedBox(height: 8),
+            _StatusRow(label: 'Pausadas', value: paused, icon: Icons.pause_circle_outline, color: scheme.onSurfaceVariant),
+            const SizedBox(height: 8),
+            _StatusRow(label: 'Finalizadas', value: finished, icon: Icons.check_circle_outline, color: scheme.onSurfaceVariant),
+            const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
@@ -363,20 +425,67 @@ class _SummaryCard extends StatelessWidget {
                 children: [
                   Icon(Icons.link_off_outlined, size: 18, color: scheme.onSurfaceVariant),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'OBS desconectado',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
-                  Text(
-                    'Pronto para conectar',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                  ),
+                  Expanded(child: Text('OBS é conectado em Configurações.')),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusRow extends StatelessWidget {
+  final String label;
+  final int value;
+  final IconData icon;
+  final Color color;
+  const _StatusRow({required this.label, required this.value, required this.icon, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 19, color: color),
+        const SizedBox(width: 8),
+        Expanded(child: Text(label)),
+        Text('$value', style: Theme.of(context).textTheme.titleSmall),
+      ],
+    );
+  }
+}
+
+class _QuickActionsCard extends StatelessWidget {
+  final LiveRecord? current;
+  final VoidCallback onOpenTransmissions;
+  final VoidCallback onOpenSettings;
+  const _QuickActionsCard({required this.current, required this.onOpenTransmissions, required this.onOpenSettings});
+
+  @override
+  Widget build(BuildContext context) {
+    final status = current == null ? 'Nenhuma transmissão ativa' : '${current!.data['status']}';
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Chip(
+              avatar: Icon(current == null ? Icons.schedule : Icons.circle, size: 12),
+              label: Text(current == null ? 'PRONTO' : status.toUpperCase()),
+            ),
+            FilledButton.icon(
+              onPressed: onOpenTransmissions,
+              icon: const Icon(Icons.live_tv),
+              label: const Text('Transmissões'),
+            ),
+            OutlinedButton.icon(
+              onPressed: onOpenSettings,
+              icon: const Icon(Icons.settings_outlined),
+              label: const Text('Configurar OBS'),
             ),
           ],
         ),
