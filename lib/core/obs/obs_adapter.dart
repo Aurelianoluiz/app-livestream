@@ -4,7 +4,10 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-/// OBS WebSocket v5 adapter using the official protocol messages.
+/// Real OBS WebSocket v5 adapter.
+///
+/// The adapter never fakes a connection: [connected] becomes true only after
+/// receiving OBS's Identified message (op 2).
 class ObsAdapter {
   WebSocketChannel? _channel;
   StreamSubscription<dynamic>? _subscription;
@@ -12,6 +15,7 @@ class ObsAdapter {
   Completer<Map<String, dynamic>>? _helloCompleter;
   Completer<void>? _identifiedCompleter;
   int _requestId = 0;
+
   bool connected = false;
 
   Future<void> connect({
@@ -21,51 +25,32 @@ class ObsAdapter {
   }) async {
     await disconnect();
 
-    final channel = WebSocketChannel.connect(Uri.parse('ws://$host:$port'));
+    final uri = Uri(
+      scheme: 'ws',
+      host: host,
+      port: port,
+    );
+    final channel = WebSocketChannel.connect(uri);
     await channel.ready;
     _channel = channel;
     _helloCompleter = Completer<Map<String, dynamic>>();
     _identifiedCompleter = Completer<void>();
 
     _subscription = channel.stream.listen(
-      (dynamic raw) {
-        final message = jsonDecode(raw as String) as Map<String, dynamic>;
-        final op = message['op'] as int?;
-        final data = (message['d'] as Map?)?.cast<String, dynamic>() ?? {};
-
-        if (op == 0) {
-          if (!(_helloCompleter?.isCompleted ?? true)) {
-            _helloCompleter!.complete(data);
-          }
-          return;
-        }
-
-        if (op == 2) {
-          if (!(_identifiedCompleter?.isCompleted ?? true)) {
-            _identifiedCompleter!.complete();
-          }
-          connected = true;
-          return;
-        }
-
-        if (op == 7) {
-          final requestId = int.tryParse('${data['requestId']}');
-          final pending = requestId == null ? null : _pending.remove(requestId);
-          if (pending != null && !pending.isCompleted) {
-            pending.complete(data);
-          }
-        }
-      },
+      (dynamic raw) => _handleMessage(raw),
       onError: (Object error, StackTrace stack) {
+        connected = false;
         if (!(_helloCompleter?.isCompleted ?? true)) {
           _helloCompleter!.completeError(error, stack);
         }
         if (!(_identifiedCompleter?.isCompleted ?? true)) {
           _identifiedCompleter!.completeError(error, stack);
         }
+        _failPending(error);
       },
       onDone: () {
         connected = false;
+        _failPending(StateError('OBS WebSocket connection closed.'));
       },
     );
 
@@ -95,6 +80,43 @@ class ObsAdapter {
     }
   }
 
+  void _handleMessage(dynamic raw) {
+    final message = jsonDecode(raw as String) as Map<String, dynamic>;
+    final op = message['op'] as int?;
+    final data = (message['d'] as Map?)?.cast<String, dynamic>() ?? {};
+
+    if (op == 0) {
+      if (!(_helloCompleter?.isCompleted ?? true)) {
+        _helloCompleter!.complete(data);
+      }
+      return;
+    }
+
+    if (op == 2) {
+      connected = true;
+      if (!(_identifiedCompleter?.isCompleted ?? true)) {
+        _identifiedCompleter!.complete();
+      }
+      return;
+    }
+
+    if (op == 7) {
+      final requestId = int.tryParse('${data['requestId']}');
+      if (requestId == null) return;
+      final pending = _pending.remove(requestId);
+      if (pending != null && !pending.isCompleted) {
+        final status = (data['requestStatus'] as Map?)?.cast<String, dynamic>();
+        if (status?['result'] == false) {
+          pending.completeError(
+            StateError('${status?['code']}: ${status?['comment'] ?? 'OBS request failed'}'),
+          );
+        } else {
+          pending.complete(data);
+        }
+      }
+    }
+  }
+
   Future<Map<String, dynamic>> call(
     String requestType, {
     Map<String, dynamic>? requestData,
@@ -115,22 +137,50 @@ class ObsAdapter {
       },
     }));
 
-    return completer.future.timeout(const Duration(seconds: 10));
+    try {
+      return await completer.future.timeout(const Duration(seconds: 10));
+    } on TimeoutException {
+      _pending.remove(id);
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> getStats() => call('GetStats');
+
+  Future<String> getCurrentSceneName() async {
+    final response = await call('GetCurrentProgramScene');
+    return '${(response['responseData'] as Map?)?['currentProgramSceneName'] ?? ''}';
+  }
+
+  Future<void> switchScene(String sceneName) async {
+    await call('SetCurrentProgramScene', requestData: {
+      'sceneName': sceneName,
+    });
+  }
+
+  Future<void> startStreaming() async {
+    await call('StartStream');
+  }
+
+  Future<void> stopStreaming() async {
+    await call('StopStream');
   }
 
   Future<void> disconnect() async {
     connected = false;
-    for (final pending in _pending.values) {
-      if (!pending.isCompleted) {
-        pending.completeError(StateError('OBS connection closed.'));
-      }
-    }
-    _pending.clear();
+    _failPending(StateError('OBS connection closed.'));
     await _subscription?.cancel();
     _subscription = null;
     await _channel?.sink.close();
     _channel = null;
     _helloCompleter = null;
     _identifiedCompleter = null;
+  }
+
+  void _failPending(Object error) {
+    for (final pending in _pending.values) {
+      if (!pending.isCompleted) pending.completeError(error);
+    }
+    _pending.clear();
   }
 }
