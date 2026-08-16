@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:hive/hive.dart';
 
 class AuthService {
   static const _boxName = 'auth';
@@ -21,6 +20,13 @@ class AuthService {
   static Future<void> initializeForTest(String path) {
     _initializing ??= Future<void>(() => Hive.init(path));
     return _initializing!;
+  }
+
+  static Future<void> resetTestInitialization() async {
+    _initializing = null;
+    if (Hive.isBoxOpen(_boxName)) {
+      await Hive.box<String>(_boxName).close();
+    }
   }
 
   Future<Box<String>> _box() async {
@@ -47,6 +53,7 @@ class AuthService {
     final box = await _box();
     if (!valid) {
       await box.put(_authenticatedKey, 'false');
+      await box.delete(_userKey);
       return false;
     }
     await box.put(_authenticatedKey, 'true');
