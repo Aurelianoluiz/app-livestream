@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/obs/obs_adapter.dart';
+import '../../services/obs_service.dart';
 import '../../services/storage_service.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -15,7 +15,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final portController = TextEditingController(text: '4455');
   final passwordController = TextEditingController();
   final storage = StorageService();
-  final obs = ObsAdapter();
+  final obs = ObsService.instance;
   bool darkMode = false;
   bool autoReconnect = true;
   bool loaded = false;
@@ -55,7 +55,7 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() { busy = true; obsMessage = 'CONECTANDO...'; });
     try {
       await obs.connect(host: host, port: port, password: passwordController.text);
-      final scene = await obs.getCurrentSceneName();
+      final scene = await obs.currentScene();
       if (mounted) setState(() => obsMessage = scene.isEmpty ? 'OBS CONECTADO' : 'OBS CONECTADO • Cena: $scene');
     } catch (error) {
       if (mounted) {
@@ -65,12 +65,36 @@ class _SettingsPageState extends State<SettingsPage> {
     } finally { if (mounted) setState(() => busy = false); }
   }
 
-  Future<void> _disconnectObs() async { await obs.disconnect(); if (mounted) setState(() => obsMessage = 'OBS NÃO CONECTADO'); }
-  Future<void> _startStream() async { try { await obs.startStreaming(); if (mounted) setState(() => obsMessage = 'OBS CONECTADO • TRANSMISSÃO INICIADA'); } catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Falha ao iniciar transmissão: $error'))); } }
-  Future<void> _stopStream() async { try { await obs.stopStreaming(); if (mounted) setState(() => obsMessage = 'OBS CONECTADO • TRANSMISSÃO FINALIZADA'); } catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Falha ao finalizar transmissão: $error'))); } }
+  Future<void> _disconnectObs() async {
+    await obs.disconnect();
+    if (mounted) setState(() => obsMessage = 'OBS NÃO CONECTADO');
+  }
+
+  Future<void> _startStream() async {
+    try {
+      await obs.startStreaming();
+      if (mounted) setState(() => obsMessage = 'OBS CONECTADO • TRANSMISSÃO INICIADA');
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Falha ao iniciar transmissão: $error')));
+    }
+  }
+
+  Future<void> _stopStream() async {
+    try {
+      await obs.stopStreaming();
+      if (mounted) setState(() => obsMessage = 'OBS CONECTADO • TRANSMISSÃO FINALIZADA');
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Falha ao finalizar transmissão: $error')));
+    }
+  }
 
   @override
-  void dispose() { obs.disconnect(); hostController.dispose(); portController.dispose(); passwordController.dispose(); super.dispose(); }
+  void dispose() {
+    hostController.dispose();
+    portController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +116,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 Text('OBS Studio', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
                 Card(child: Padding(padding: const EdgeInsets.all(20), child: Column(children: [
-                  ListTile(contentPadding: EdgeInsets.zero, leading: Icon(obs.connected ? Icons.link : Icons.link_off_outlined), title: Text(obsMessage), subtitle: const Text('Integração OBS WebSocket v5 com conexão real')),
+                  ListTile(contentPadding: EdgeInsets.zero, leading: Icon(obs.connected ? Icons.link : Icons.link_off_outlined), title: Text(obsMessage), subtitle: const Text('Integração OBS WebSocket v5 com sessão compartilhada')),
                   const SizedBox(height: 8),
                   TextField(controller: hostController, decoration: const InputDecoration(labelText: 'Host', border: OutlineInputBorder())),
                   const SizedBox(height: 12),
