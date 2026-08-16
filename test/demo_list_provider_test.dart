@@ -2,11 +2,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:app_livestream/providers/demo_list_provider.dart';
 import 'package:app_livestream/services/storage_service.dart';
 
-class MemoryStorage implements StorageService {
+class MemoryStorage extends StorageService {
   final Map<String, List<String>> _data = {};
 
   @override
-  Future<List<String>> load(String boxName) async => List<String>.from(_data[boxName] ?? const []);
+  Future<List<String>> load(String boxName) async =>
+      List<String>.from(_data[boxName] ?? const []);
 
   @override
   Future<void> save(String boxName, List<String> values) async {
