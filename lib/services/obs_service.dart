@@ -17,9 +17,19 @@ class ObsService {
   bool _autoReconnect = true;
   bool _reconnectArmed = false;
   bool _reconnecting = false;
+  int _reconnectAttempts = 0;
+  DateTime? _lastReconnectAt;
 
   bool get connected => adapter.connected;
   bool get autoReconnect => _autoReconnect;
+  bool get reconnecting => _reconnecting;
+  int get reconnectAttempts => _reconnectAttempts;
+  DateTime? get lastReconnectAt => _lastReconnectAt;
+  DateTime? get lastConnectedAt => adapter.lastConnectedAt;
+  DateTime? get lastMessageAt => adapter.lastMessageAt;
+  DateTime? get lastDisconnectedAt => adapter.lastDisconnectedAt;
+  String? get lastError => adapter.lastError;
+  int? get lastRequestLatencyMs => adapter.lastRequestLatencyMs;
 
   void setAutoReconnect(bool value) {
     _autoReconnect = value;
@@ -40,6 +50,7 @@ class ObsService {
     this.port = port;
     _password = password.isEmpty ? null : password;
     _reconnectArmed = true;
+    _reconnectAttempts = 0;
     await adapter.connect(host: host, port: port, password: _password);
     _scheduleReconnectChecks();
   }
@@ -50,6 +61,7 @@ class ObsService {
     _reconnectTimer = null;
     await adapter.disconnect();
     _password = null;
+    _reconnecting = false;
   }
 
   void _scheduleReconnectChecks() {
@@ -62,6 +74,8 @@ class ObsService {
   Future<void> _attemptReconnect() async {
     if (!_autoReconnect || !_reconnectArmed || connected || _reconnecting) return;
     _reconnecting = true;
+    _reconnectAttempts += 1;
+    _lastReconnectAt = DateTime.now();
     try {
       await adapter.connect(host: host, port: port, password: _password);
     } catch (_) {
