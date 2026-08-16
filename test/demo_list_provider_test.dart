@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:app_livestream/providers/demo_list_provider.dart';
-import 'package:app_livestream/services/storage_service.dart';
+import 'package:live_studio_asr/providers/demo_list_provider.dart';
+import 'package:live_studio_asr/services/storage_service.dart';
 
 class MemoryStorage extends StorageService {
   final Map<String, List<String>> _data = {};
