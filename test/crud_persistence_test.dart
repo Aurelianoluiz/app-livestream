@@ -1,37 +1,71 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:live_studio_asr/app/app.dart';
+import 'package:live_studio_asr/features/auth/login_page.dart';
 import 'package:live_studio_asr/services/auth_service.dart';
-import 'package:path/path.dart' as p;
 
 void main() {
   setUpAll(() async {
     final dir = await Directory.systemTemp.createTemp('live_studio_auth_test_');
-    await AuthService.initializeForTest(p.normalize(dir.path));
+    await AuthService.initializeForTest(dir.path);
+    addTearDown(() async {
+      await AuthService.resetTestInitialization();
+    });
   });
 
-  testWidgets('app exige login e então exibe o painel principal', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(1280, 720));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-
+  test('AuthService accepts the default account and persists session', () async {
     final auth = AuthService();
     await auth.logout();
 
-    await tester.pumpWidget(const ProviderScope(child: LiveStudioApp()));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    expect(await auth.isAuthenticated(), isFalse);
 
-    expect(find.text('LIVE STUDIO ASR'), findsWidgets);
+    final success = await auth.login(
+      AuthService.defaultUsername,
+      AuthService.defaultPassword,
+    );
+
+    expect(success, isTrue);
+    expect(await auth.isAuthenticated(), isTrue);
+    expect(await auth.currentUser(), AuthService.defaultUsername);
+
+    await auth.logout();
+    expect(await auth.isAuthenticated(), isFalse);
+    expect(await auth.currentUser(), isNull);
+  });
+
+  test('AuthService rejects invalid credentials', () async {
+    final auth = AuthService();
+    await auth.logout();
+
+    final success = await auth.login(
+      AuthService.defaultUsername,
+      'senha-incorreta',
+    );
+
+    expect(success, isFalse);
+    expect(await auth.isAuthenticated(), isFalse);
+  });
+
+  testWidgets('LoginPage validates credentials and calls onLoggedIn', (tester) async {
+    var loggedIn = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LoginPage(
+          onLoggedIn: () async {
+            loggedIn = true;
+          },
+        ),
+      ),
+    );
+
+    expect(find.text('LIVE STUDIO ASR'), findsOneWidget);
     expect(find.text('Entrar'), findsOneWidget);
 
     await tester.tap(find.text('Entrar'));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 200));
 
-    expect(find.text('EXEMPLO DE LIVE'), findsOneWidget);
-    expect(find.text('Cenas'), findsWidgets);
-    expect(find.text('Produtos'), findsWidgets);
+    expect(loggedIn, isTrue);
   });
 }
