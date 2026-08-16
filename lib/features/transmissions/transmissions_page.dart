@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../common/entity_list_page.dart';
 import '../../providers/transmissions_provider.dart';
+import '../../providers/demo_list_provider.dart';
 
 class TransmissionsPage extends ConsumerStatefulWidget {
   const TransmissionsPage({super.key});
@@ -148,7 +149,9 @@ class _TransmissionsPageState extends ConsumerState<TransmissionsPage> {
         .firstOrNull;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Transmissões')),
+      appBar: AppBar(
+        title: const Text('Transmissões'),
+      ),
       body: Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
         child: Column(
