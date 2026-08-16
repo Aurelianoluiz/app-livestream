@@ -3,7 +3,13 @@ import '../../services/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   final Future<void> Function() onLoggedIn;
-  const LoginPage({super.key, required this.onLoggedIn});
+  final Future<bool> Function(String username, String password)? authenticate;
+
+  const LoginPage({
+    super.key,
+    required this.onLoggedIn,
+    this.authenticate,
+  });
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -25,16 +31,32 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  Future<bool> _authenticate(String username, String password) {
+    final authenticate = widget.authenticate;
+    return authenticate == null
+        ? _auth.login(username, password)
+        : authenticate(username, password);
+  }
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() { _loading = true; _error = null; });
-    final ok = await _auth.login(_username.text, _password.text);
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    final ok = await _authenticate(_username.text, _password.text);
     if (!mounted) return;
+
     if (ok) {
       await widget.onLoggedIn();
       return;
     }
-    setState(() { _loading = false; _error = 'Usuário ou senha inválidos.'; });
+
+    setState(() {
+      _loading = false;
+      _error = 'Usuário ou senha inválidos.';
+    });
   }
 
   @override
@@ -56,15 +78,24 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     Icon(Icons.live_tv_rounded, size: 54, color: theme.colorScheme.primary),
                     const SizedBox(height: 12),
-                    Text('LIVE STUDIO ASR', textAlign: TextAlign.center, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+                    Text(
+                      'LIVE STUDIO ASR',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                    ),
                     const SizedBox(height: 6),
                     const Text('Acesso ao painel de transmissão', textAlign: TextAlign.center),
                     const SizedBox(height: 28),
                     TextFormField(
                       controller: _username,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(labelText: 'Usuário', prefixIcon: Icon(Icons.person_outline)),
-                      validator: (value) => value == null || value.trim().isEmpty ? 'Informe o usuário' : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Usuário',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                      validator: (value) => value == null || value.trim().isEmpty
+                          ? 'Informe o usuário'
+                          : null,
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
@@ -73,23 +104,42 @@ class _LoginPageState extends State<LoginPage> {
                       decoration: InputDecoration(
                         labelText: 'Senha',
                         prefixIcon: const Icon(Icons.lock_outline),
-                        suffixIcon: IconButton(onPressed: () => setState(() => _obscure = !_obscure), icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off)),
+                        suffixIcon: IconButton(
+                          onPressed: () => setState(() => _obscure = !_obscure),
+                          icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+                        ),
                       ),
-                      validator: (value) => value == null || value.isEmpty ? 'Informe a senha' : null,
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Informe a senha'
+                          : null,
                       onFieldSubmitted: (_) => _login(),
                     ),
                     if (_error != null) ...[
                       const SizedBox(height: 12),
-                      Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: theme.colorScheme.error)),
+                      Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: theme.colorScheme.error),
+                      ),
                     ],
                     const SizedBox(height: 22),
                     FilledButton.icon(
                       onPressed: _loading ? null : _login,
-                      icon: _loading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.login),
+                      icon: _loading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.login),
                       label: Text(_loading ? 'Entrando...' : 'Entrar'),
                     ),
                     const SizedBox(height: 12),
-                    Text('Conta local V1: ${AuthService.defaultUsername}', textAlign: TextAlign.center, style: theme.textTheme.bodySmall),
+                    Text(
+                      'Conta local V1: ${AuthService.defaultUsername}',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall,
+                    ),
                   ],
                 ),
               ),
