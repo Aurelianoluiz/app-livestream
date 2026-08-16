@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../common/entity_list_page.dart';
 import '../../providers/transmissions_provider.dart';
 import '../../providers/demo_list_provider.dart';
+import '../../services/obs_service.dart';
 
 class TransmissionsPage extends ConsumerStatefulWidget {
   const TransmissionsPage({super.key});
@@ -15,6 +16,9 @@ class TransmissionsPage extends ConsumerStatefulWidget {
 class _TransmissionsPageState extends ConsumerState<TransmissionsPage> {
   Timer? _ticker;
   Duration _elapsed = Duration.zero;
+  final obs = ObsService.instance;
+  String obsState = 'OBS NÃO CONECTADO';
+  bool obsBusy = false;
 
   @override
   void initState() {
@@ -52,7 +56,72 @@ class _TransmissionsPageState extends ConsumerState<TransmissionsPage> {
     return '${two(d.inHours)}:${two(d.inMinutes.remainder(60))}:${two(d.inSeconds.remainder(60))}';
   }
 
-  Future<void> _setStatus(LiveRecord record, String status) async {
+  Future<void> _syncObsState() async {
+    if (!obs.connected) {
+      if (mounted) setState(() => obsState = 'OBS NÃO CONECTADO');
+      return;
+    }
+    try {
+      final scene = await obs.currentScene();
+      if (mounted) setState(() => obsState = scene.isEmpty ? 'OBS CONECTADO' : 'OBS CONECTADO • Cena: $scene');
+    } catch (_) {
+      if (mounted) setState(() => obsState = 'OBS CONECTADO');
+    }
+  }
+
+  Future<void> _startObs(LiveRecord record) async {
+    if (!obs.connected) return;
+    setState(() => obsBusy = true);
+    try {
+      await obs.startStreaming();
+      await _setStatus(record, 'running', syncObs: false);
+      if (mounted) setState(() => obsState = 'OBS CONECTADO • TRANSMISSÃO INICIADA');
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Falha ao iniciar no OBS: $error')));
+    } finally {
+      if (mounted) setState(() => obsBusy = false);
+    }
+  }
+
+  Future<void> _stopObs(LiveRecord record) async {
+    if (!obs.connected) {
+      await _setStatus(record, 'finished');
+      return;
+    }
+    setState(() => obsBusy = true);
+    try {
+      await obs.stopStreaming();
+      await _setStatus(record, 'finished', syncObs: false);
+      if (mounted) setState(() => obsState = 'OBS CONECTADO • TRANSMISSÃO FINALIZADA');
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Falha ao finalizar no OBS: $error')));
+    } finally {
+      if (mounted) setState(() => obsBusy = false);
+    }
+  }
+
+  Future<void> _switchScene(LiveRecord record) async {
+    if (!obs.connected) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Conecte o OBS em Configurações primeiro.')));
+      return;
+    }
+    final scene = '${record.data['scene'] ?? ''}'.trim();
+    if (scene.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Esta transmissão não possui uma cena configurada.')));
+      return;
+    }
+    setState(() => obsBusy = true);
+    try {
+      await obs.switchScene(scene);
+      if (mounted) setState(() => obsState = 'OBS CONECTADO • Cena: $scene');
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Falha ao trocar cena no OBS: $error')));
+    } finally {
+      if (mounted) setState(() => obsBusy = false);
+    }
+  }
+
+  Future<void> _setStatus(LiveRecord record, String status, {bool syncObs = true}) async {
     final items = ref.read(transmissionsProvider);
     final index = items.indexWhere((r) => r.id == record.id);
     if (index < 0) return;
@@ -77,6 +146,7 @@ class _TransmissionsPageState extends ConsumerState<TransmissionsPage> {
           index,
           record.copyWith(data: data, active: status != 'finished'),
         );
+    if (syncObs) await _syncObsState();
     _refreshElapsed();
   }
 
@@ -94,9 +164,7 @@ class _TransmissionsPageState extends ConsumerState<TransmissionsPage> {
               children: [
                 const Icon(Icons.live_tv, size: 28),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: Text(current.name, style: Theme.of(context).textTheme.titleLarge),
-                ),
+                Expanded(child: Text(current.name, style: Theme.of(context).textTheme.titleLarge)),
                 Chip(
                   avatar: Icon(running ? Icons.circle : Icons.pause_circle, size: 12),
                   label: Text(running ? 'AO VIVO' : 'PAUSADA'),
@@ -104,34 +172,36 @@ class _TransmissionsPageState extends ConsumerState<TransmissionsPage> {
               ],
             ),
             const SizedBox(height: 14),
-            Text(
-              _fmt(_elapsed),
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(fontFeatures: const []),
-            ),
+            Text(_fmt(_elapsed), style: Theme.of(context).textTheme.displaySmall?.copyWith(fontFeatures: const [])),
             const SizedBox(height: 6),
             Text('Cena: ${current.data['scene'] ?? 'Não definida'}'),
             Text('Produto: ${current.data['product'] ?? 'Não definido'}'),
             Text('Oferta: ${current.data['offer'] ?? 'Nenhuma'}'),
-            Text('OBS: ${current.data['obs'] ?? 'Não conectado'}'),
+            Text('OBS: $obsState'),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
                 FilledButton.icon(
-                  onPressed: running ? null : () => _setStatus(current, 'running'),
+                  onPressed: obsBusy || running ? null : () => obs.connected ? _startObs(current) : _setStatus(current, 'running'),
                   icon: const Icon(Icons.play_arrow),
-                  label: const Text('Iniciar'),
+                  label: Text(obs.connected ? 'Iniciar no OBS' : 'Iniciar'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: running ? () => _setStatus(current, 'paused') : null,
+                  onPressed: obsBusy || !running ? null : () => _setStatus(current, 'paused'),
                   icon: const Icon(Icons.pause),
                   label: const Text('Pausar'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: () => _setStatus(current, 'finished'),
+                  onPressed: obsBusy ? null : () => _stopObs(current),
                   icon: const Icon(Icons.stop),
-                  label: const Text('Finalizar'),
+                  label: Text(obs.connected ? 'Finalizar no OBS' : 'Finalizar'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: obsBusy ? null : () => _switchScene(current),
+                  icon: const Icon(Icons.layers_outlined),
+                  label: const Text('Aplicar cena no OBS'),
                 ),
               ],
             ),
@@ -148,10 +218,12 @@ class _TransmissionsPageState extends ConsumerState<TransmissionsPage> {
         .where((r) => r.data['status'] == 'running' || r.data['status'] == 'paused')
         .firstOrNull;
 
+    if (obs.connected && obsState == 'OBS NÃO CONECTADO') {
+      _syncObsState();
+    }
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Transmissões'),
-      ),
+      appBar: AppBar(title: const Text('Transmissões')),
       body: Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
         child: Column(
