@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/obs/obs_adapter.dart';
 import '../../services/storage_service.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -13,9 +14,12 @@ class _SettingsPageState extends State<SettingsPage> {
   final portController = TextEditingController(text: '4455');
   final passwordController = TextEditingController();
   final storage = StorageService();
+  final obs = ObsAdapter();
   bool darkMode = false;
   bool autoReconnect = true;
   bool loaded = false;
+  bool busy = false;
+  String obsMessage = 'OBS NÃO CONECTADO';
 
   @override
   void initState() {
@@ -24,6 +28,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _load() async {
+    await storage.init();
     final settings = await storage.loadSettings();
     if (!mounted) return;
     setState(() {
@@ -47,8 +52,56 @@ class _SettingsPageState extends State<SettingsPage> {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Configurações salvas no Hive.')));
   }
 
+  Future<void> _connectObs() async {
+    final host = hostController.text.trim().isEmpty ? 'localhost' : hostController.text.trim();
+    final port = int.tryParse(portController.text) ?? 4455;
+    setState(() {
+      busy = true;
+      obsMessage = 'CONECTANDO...';
+    });
+    try {
+      await obs.connect(host: host, port: port, password: passwordController.text);
+      final scene = await obs.getCurrentSceneName();
+      if (!mounted) return;
+      setState(() {
+        obsMessage = scene.isEmpty ? 'OBS CONECTADO' : 'OBS CONECTADO • Cena: $scene';
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => obsMessage = 'FALHA NA CONEXÃO');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Não foi possível conectar ao OBS: $error')));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> _disconnectObs() async {
+    await obs.disconnect();
+    if (!mounted) return;
+    setState(() => obsMessage = 'OBS NÃO CONECTADO');
+  }
+
+  Future<void> _startStream() async {
+    try {
+      await obs.startStreaming();
+      if (mounted) setState(() => obsMessage = 'OBS CONECTADO • TRANSMISSÃO INICIADA');
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Falha ao iniciar transmissão: $error')));
+    }
+  }
+
+  Future<void> _stopStream() async {
+    try {
+      await obs.stopStreaming();
+      if (mounted) setState(() => obsMessage = 'OBS CONECTADO • TRANSMISSÃO FINALIZADA');
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Falha ao finalizar transmissão: $error')));
+    }
+  }
+
   @override
   void dispose() {
+    obs.disconnect();
     hostController.dispose();
     portController.dispose();
     passwordController.dispose();
@@ -69,18 +122,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 Card(
                   child: Column(
                     children: [
-                      SwitchListTile.adaptive(
-                        title: const Text('Modo escuro'),
-                        subtitle: const Text('Preferência salva para futuras versões do tema'),
-                        value: darkMode,
-                        onChanged: (value) => setState(() => darkMode = value),
-                      ),
+                      SwitchListTile.adaptive(title: const Text('Modo escuro'), subtitle: const Text('Preferência salva para futuras versões do tema'), value: darkMode, onChanged: (value) => setState(() => darkMode = value)),
                       const Divider(height: 1),
-                      const ListTile(
-                        leading: Icon(Icons.palette_outlined),
-                        title: Text('Identidade visual'),
-                        subtitle: Text('LIVE STUDIO ASR'),
-                      ),
+                      const ListTile(leading: Icon(Icons.palette_outlined), title: Text('Identidade visual'), subtitle: Text('LIVE STUDIO ASR')),
                     ],
                   ),
                 ),
@@ -92,44 +136,29 @@ class _SettingsPageState extends State<SettingsPage> {
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
-                        const ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: Icon(Icons.link_off_outlined),
-                          title: Text('OBS NÃO CONECTADO'),
-                          subtitle: Text('Integração OBS WebSocket preparada para conexão real'),
-                        ),
+                        ListTile(contentPadding: EdgeInsets.zero, leading: Icon(obs.connected ? Icons.link : Icons.link_off_outlined), title: Text(obsMessage), subtitle: const Text('Integração OBS WebSocket v5 com conexão real')), 
                         const SizedBox(height: 8),
                         TextField(controller: hostController, decoration: const InputDecoration(labelText: 'Host', border: OutlineInputBorder())),
                         const SizedBox(height: 12),
                         TextField(controller: portController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Porta', border: OutlineInputBorder())),
                         const SizedBox(height: 12),
-                        TextField(controller: passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'Senha', border: OutlineInputBorder(), helperText: 'A senha não é armazenada em texto puro nesta versão.')),
+                        TextField(controller: passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'Senha do OBS', border: OutlineInputBorder(), helperText: 'Usada somente durante a conexão e não salva em texto puro.')),
                         const SizedBox(height: 12),
-                        SwitchListTile.adaptive(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Reconectar automaticamente'),
-                          value: autoReconnect,
-                          onChanged: (value) => setState(() => autoReconnect = value),
-                        ),
+                        SwitchListTile.adaptive(contentPadding: EdgeInsets.zero, title: const Text('Reconectar automaticamente'), value: autoReconnect, onChanged: (value) => setState(() => autoReconnect = value)),
                         const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: FilledButton.icon(onPressed: _save, icon: const Icon(Icons.save_outlined), label: const Text('Salvar configuração')),
-                        ),
+                        Wrap(spacing: 8, runSpacing: 8, children: [
+                          FilledButton.icon(onPressed: busy || obs.connected ? null : _connectObs, icon: const Icon(Icons.link), label: Text(busy ? 'Conectando...' : 'Conectar ao OBS')),
+                          OutlinedButton.icon(onPressed: obs.connected ? _disconnectObs : null, icon: const Icon(Icons.link_off), label: const Text('Desconectar')),
+                          OutlinedButton.icon(onPressed: obs.connected ? _startStream : null, icon: const Icon(Icons.play_arrow), label: const Text('Iniciar Live')),
+                          OutlinedButton.icon(onPressed: obs.connected ? _stopStream : null, icon: const Icon(Icons.stop), label: const Text('Parar Live')),
+                          FilledButton.icon(onPressed: _save, icon: const Icon(Icons.save_outlined), label: const Text('Salvar configuração')),
+                        ]),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 24),
-                Text('Sobre', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 8),
-                const Card(
-                  child: ListTile(
-                    leading: Icon(Icons.live_tv_outlined),
-                    title: Text('LIVE STUDIO ASR'),
-                    subtitle: Text('Web + Android • Riverpod • Hive • OBS WebSocket'),
-                  ),
-                ),
+                const Card(child: ListTile(leading: Icon(Icons.live_tv_outlined), title: Text('LIVE STUDIO ASR'), subtitle: Text('Web + Android • Riverpod • Hive • OBS WebSocket v5'))),
               ],
             ),
     );
