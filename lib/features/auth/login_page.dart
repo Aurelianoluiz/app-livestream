@@ -17,8 +17,8 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _username = TextEditingController(text: AuthService.defaultUsername);
-  final _password = TextEditingController(text: AuthService.defaultPassword);
+  final _username = TextEditingController();
+  final _password = TextEditingController();
   final _auth = AuthService();
   bool _loading = false;
   bool _obscure = true;
@@ -89,8 +89,10 @@ class _LoginPageState extends State<LoginPage> {
                     TextFormField(
                       controller: _username,
                       keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [AutofillHints.username, AutofillHints.email],
                       decoration: const InputDecoration(
                         labelText: 'Usuário',
+                        hintText: 'Digite seu usuário',
                         prefixIcon: Icon(Icons.person_outline),
                       ),
                       validator: (value) => value == null || value.trim().isEmpty
@@ -101,8 +103,10 @@ class _LoginPageState extends State<LoginPage> {
                     TextFormField(
                       controller: _password,
                       obscureText: _obscure,
+                      autofillHints: const [AutofillHints.password],
                       decoration: InputDecoration(
                         labelText: 'Senha',
+                        hintText: 'Digite sua senha',
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
                           onPressed: () => setState(() => _obscure = !_obscure),
@@ -136,7 +140,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Conta local V1: ${AuthService.defaultUsername}',
+                      'Ambiente local V1',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodySmall,
                     ),
