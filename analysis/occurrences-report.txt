@@ -4,4 +4,4 @@ Legacy brand scan: no active-code occurrences found.
 Scope: tracked repository files on main.
 Result: 0 occurrences found in project source, configuration, workflows, documentation, and assets, excluding this report itself.
 
-Verification date: 2026-08-12
+Verification date: 2026-08-16
