@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/backup_service.dart';
@@ -19,6 +21,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final storage = StorageService();
   final backup = BackupService();
   final obs = ObsService.instance;
+  Timer? _monitorTimer;
   bool darkMode = false;
   bool autoReconnect = true;
   bool loaded = false;
@@ -29,6 +32,9 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     _load();
+    _monitorTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> _load() async {
@@ -192,8 +198,23 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  String _time(DateTime? value) {
+    if (value == null) return '—';
+    final local = value.toLocal();
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(local.day)}/${two(local.month)} ${two(local.hour)}:${two(local.minute)}:${two(local.second)}';
+  }
+
+  String _statusLabel() {
+    if (obs.reconnecting) return 'RECONEXÃO EM ANDAMENTO';
+    if (obs.connected) return 'CONECTADO';
+    if (obs.lastDisconnectedAt != null && autoReconnect) return 'DESCONECTADO • AGUARDANDO RECONEXÃO';
+    return 'DESCONECTADO';
+  }
+
   @override
   void dispose() {
+    _monitorTimer?.cancel();
     hostController.dispose();
     portController.dispose();
     passwordController.dispose();
@@ -274,7 +295,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           contentPadding: EdgeInsets.zero,
                           leading: Icon(obs.connected ? Icons.link : Icons.link_off_outlined),
                           title: Text(obsMessage),
-                          subtitle: const Text('Integração OBS WebSocket v5 com sessão compartilhada'),
+                          subtitle: Text('${_statusLabel()} • integração OBS WebSocket v5'),
                         ),
                         const SizedBox(height: 8),
                         TextField(controller: hostController, decoration: const InputDecoration(labelText: 'Host', border: OutlineInputBorder())),
@@ -293,7 +314,37 @@ class _SettingsPageState extends State<SettingsPage> {
                             obs.setAutoReconnect(value);
                           },
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
+                        Card(
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Monitoramento operacional', style: Theme.of(context).textTheme.titleMedium),
+                                const SizedBox(height: 12),
+                                Wrap(
+                                  spacing: 18,
+                                  runSpacing: 12,
+                                  children: [
+                                    Text('Última conexão: ${_time(obs.lastConnectedAt)}'),
+                                    Text('Última mensagem: ${_time(obs.lastMessageAt)}'),
+                                    Text('Última desconexão: ${_time(obs.lastDisconnectedAt)}'),
+                                    Text('Reconexões: ${obs.reconnectAttempts}'),
+                                    Text('Última tentativa: ${_time(obs.lastReconnectAt)}'),
+                                    Text('Latência: ${obs.lastRequestLatencyMs == null ? '—' : '${obs.lastRequestLatencyMs} ms'}'),
+                                  ],
+                                ),
+                                if (obs.lastError != null && obs.lastError!.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  Text('Último erro: ${obs.lastError}', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
