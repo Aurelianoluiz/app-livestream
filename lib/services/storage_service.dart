@@ -10,7 +10,7 @@ class StorageService {
   static const overlaysBox = 'overlays';
   static const settingsBox = 'settings';
 
-  Future<void>? _initializing;
+  static Future<void>? _initializing;
 
   Future<void> init() {
     _initializing ??= Hive.initFlutter();
