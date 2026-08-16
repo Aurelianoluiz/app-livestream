@@ -17,6 +17,11 @@ class ObsAdapter {
   int _requestId = 0;
 
   bool connected = false;
+  DateTime? lastConnectedAt;
+  DateTime? lastMessageAt;
+  DateTime? lastDisconnectedAt;
+  String? lastError;
+  int? lastRequestLatencyMs;
 
   Future<void> connect({
     String host = 'localhost',
@@ -48,6 +53,8 @@ class ObsAdapter {
       (dynamic raw) => _handleMessage(raw),
       onError: (Object error, StackTrace stack) {
         connected = false;
+        lastError = '$error';
+        lastDisconnectedAt = DateTime.now();
         if (!(_helloCompleter?.isCompleted ?? true)) {
           _helloCompleter!.completeError(error, stack);
         }
@@ -58,6 +65,7 @@ class ObsAdapter {
       },
       onDone: () {
         connected = false;
+        lastDisconnectedAt = DateTime.now();
         _failPending(StateError('OBS WebSocket connection closed.'));
       },
     );
@@ -82,13 +90,15 @@ class ObsAdapter {
 
       channel.sink.add(jsonEncode({'op': 1, 'd': identify}));
       await _identifiedCompleter!.future.timeout(const Duration(seconds: 5));
-    } catch (_) {
+    } catch (error) {
+      lastError = '$error';
       await disconnect();
       rethrow;
     }
   }
 
   void _handleMessage(dynamic raw) {
+    lastMessageAt = DateTime.now();
     if (raw is! String) return;
 
     final Map<String, dynamic> message;
@@ -97,7 +107,7 @@ class ObsAdapter {
       if (decoded is! Map) return;
       message = decoded.cast<String, dynamic>();
     } on FormatException {
-      // Ignore malformed frames rather than breaking the WebSocket listener.
+      lastError = 'Recebido frame JSON inválido do OBS.';
       return;
     }
 
@@ -113,6 +123,9 @@ class ObsAdapter {
 
     if (op == 2) {
       connected = true;
+      lastConnectedAt = DateTime.now();
+      lastDisconnectedAt = null;
+      lastError = null;
       if (!(_identifiedCompleter?.isCompleted ?? true)) {
         _identifiedCompleter!.complete();
       }
@@ -126,9 +139,11 @@ class ObsAdapter {
       if (pending != null && !pending.isCompleted) {
         final status = (data['requestStatus'] as Map?)?.cast<String, dynamic>();
         if (status?['result'] == false) {
-          pending.completeError(
-            StateError('${status?['code']}: ${status?['comment'] ?? 'OBS request failed'}'),
+          final error = StateError(
+            '${status?['code']}: ${status?['comment'] ?? 'OBS request failed'}',
           );
+          lastError = '$error';
+          pending.completeError(error);
         } else {
           pending.complete(data);
         }
@@ -150,6 +165,7 @@ class ObsAdapter {
     final id = ++_requestId;
     final completer = Completer<Map<String, dynamic>>();
     _pending[id] = completer;
+    final stopwatch = Stopwatch()..start();
 
     try {
       _channel!.sink.add(jsonEncode({
@@ -162,6 +178,8 @@ class ObsAdapter {
       }));
     } catch (error, stack) {
       _pending.remove(id);
+      lastError = '$error';
+      stopwatch.stop();
       if (!completer.isCompleted) {
         completer.completeError(error, stack);
       }
@@ -169,9 +187,14 @@ class ObsAdapter {
     }
 
     try {
-      return await completer.future.timeout(const Duration(seconds: 10));
+      final response = await completer.future.timeout(const Duration(seconds: 10));
+      stopwatch.stop();
+      lastRequestLatencyMs = stopwatch.elapsedMilliseconds;
+      return response;
     } on TimeoutException {
+      stopwatch.stop();
       _pending.remove(id);
+      lastError = 'Timeout na requisição $requestType.';
       rethrow;
     }
   }
@@ -202,7 +225,9 @@ class ObsAdapter {
   }
 
   Future<void> disconnect() async {
+    final wasConnected = connected;
     connected = false;
+    if (wasConnected) lastDisconnectedAt = DateTime.now();
     _failPending(StateError('OBS connection closed.'));
     await _subscription?.cancel();
     _subscription = null;
