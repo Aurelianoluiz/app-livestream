@@ -46,12 +46,14 @@ void main() {
     expect(await auth.isAuthenticated(), isFalse);
   });
 
-  testWidgets('LoginPage validates credentials and calls onLoggedIn', (tester) async {
+  testWidgets('LoginPage renders and calls onLoggedIn after successful authentication', (tester) async {
     var loggedIn = false;
 
     await tester.pumpWidget(
       MaterialApp(
         home: LoginPage(
+          authenticate: (username, password) async =>
+              username == AuthService.defaultUsername && password == AuthService.defaultPassword,
           onLoggedIn: () async {
             loggedIn = true;
           },
@@ -64,7 +66,6 @@ void main() {
 
     await tester.tap(find.text('Entrar'));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 200));
 
     expect(loggedIn, isTrue);
   });
