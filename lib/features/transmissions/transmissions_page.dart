@@ -57,6 +57,35 @@ class _TransmissionsPageState extends ConsumerState<TransmissionsPage> {
     await ref.read(transmissionsProvider.notifier).replaceAt(index, record.copyWith(data: data, active: status != 'finished'));
   }
 
+  Widget _currentCard(BuildContext context, LiveRecord current) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.live_tv, size: 28),
+            const SizedBox(width: 12),
+            Expanded(child: Text(current.name, style: Theme.of(context).textTheme.titleLarge)),
+          ]),
+          const SizedBox(height: 14),
+          Text(_fmt(_elapsed), style: Theme.of(context).textTheme.displaySmall?.copyWith(fontFeatures: const [])),
+          const SizedBox(height: 6),
+          Text('Cena: ${current.data['scene'] ?? 'Não definida'}'),
+          Text('Produto: ${current.data['product'] ?? 'Não definido'}'),
+          Text('Oferta: ${current.data['offer'] ?? 'Nenhuma'}'),
+          Text('OBS: ${current.data['obs'] ?? 'Não conectado'}'),
+          const SizedBox(height: 12),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            FilledButton.icon(onPressed: () => _setStatus(current, 'running'), icon: const Icon(Icons.play_arrow), label: const Text('Iniciar')),
+            OutlinedButton.icon(onPressed: () => _setStatus(current, 'paused'), icon: const Icon(Icons.pause), label: const Text('Pausar')),
+            OutlinedButton.icon(onPressed: () => _setStatus(current, 'finished'), icon: const Icon(Icons.stop), label: const Text('Finalizar')),
+          ]),
+        ]),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final transmissions = ref.watch(transmissionsProvider);
@@ -76,39 +105,23 @@ class _TransmissionsPageState extends ConsumerState<TransmissionsPage> {
             ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-        children: [
-          if (current != null)
-            Card(
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    const Icon(Icons.live_tv, size: 28),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text(current.name, style: Theme.of(context).textTheme.titleLarge)),
-                  ]),
-                  const SizedBox(height: 14),
-                  Text(_fmt(_elapsed), style: Theme.of(context).textTheme.displaySmall?.copyWith(fontFeatures: const [])),
-                  const SizedBox(height: 6),
-                  Text('Cena: ${current.data['scene'] ?? 'Não definida'}'),
-                  Text('Produto: ${current.data['product'] ?? 'Não definido'}'),
-                  Text('Oferta: ${current.data['offer'] ?? 'Nenhuma'}'),
-                  Text('OBS: ${current.data['obs'] ?? 'Não conectado'}'),
-                  const SizedBox(height: 12),
-                  Wrap(spacing: 8, runSpacing: 8, children: [
-                    FilledButton.icon(onPressed: () => _setStatus(current, 'running'), icon: const Icon(Icons.play_arrow), label: const Text('Iniciar')),
-                    OutlinedButton.icon(onPressed: () => _setStatus(current, 'paused'), icon: const Icon(Icons.pause), label: const Text('Pausar')),
-                    OutlinedButton.icon(onPressed: () => _setStatus(current, 'finished'), icon: const Icon(Icons.stop), label: const Text('Finalizar')),
-                  ]),
-                ]),
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Column(
+          children: [
+            if (current != null) ...[
+              _currentCard(context, current),
+              const SizedBox(height: 12),
+            ],
+            Expanded(
+              child: EntityListPage(
+                title: 'Transmissões',
+                singular: 'Transmissão',
+                provider: transmissionsProvider,
               ),
             ),
-          const SizedBox(height: 10),
-          EntityListPage(title: 'Transmissões', singular: 'Transmissão', provider: transmissionsProvider),
-        ],
+          ],
+        ),
       ),
     );
   }
