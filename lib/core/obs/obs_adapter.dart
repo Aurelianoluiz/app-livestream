@@ -23,11 +23,19 @@ class ObsAdapter {
     int port = 4455,
     String? password,
   }) async {
+    final normalizedHost = host.trim();
+    if (normalizedHost.isEmpty) {
+      throw ArgumentError('OBS host cannot be empty.');
+    }
+    if (port < 1 || port > 65535) {
+      throw ArgumentError.value(port, 'port', 'must be between 1 and 65535');
+    }
+
     await disconnect();
 
     final uri = Uri(
       scheme: 'ws',
-      host: host,
+      host: normalizedHost,
       port: port,
     );
     final channel = WebSocketChannel.connect(uri);
@@ -81,7 +89,18 @@ class ObsAdapter {
   }
 
   void _handleMessage(dynamic raw) {
-    final message = jsonDecode(raw as String) as Map<String, dynamic>;
+    if (raw is! String) return;
+
+    final Map<String, dynamic> message;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return;
+      message = decoded.cast<String, dynamic>();
+    } on FormatException {
+      // Ignore malformed frames rather than breaking the WebSocket listener.
+      return;
+    }
+
     final op = message['op'] as int?;
     final data = (message['d'] as Map?)?.cast<String, dynamic>() ?? {};
 
@@ -124,18 +143,30 @@ class ObsAdapter {
     if (!connected || _channel == null) {
       throw StateError('OBS WebSocket is not connected.');
     }
+    if (requestType.trim().isEmpty) {
+      throw ArgumentError('OBS request type cannot be empty.');
+    }
 
     final id = ++_requestId;
     final completer = Completer<Map<String, dynamic>>();
     _pending[id] = completer;
-    _channel!.sink.add(jsonEncode({
-      'op': 6,
-      'd': {
-        'requestType': requestType,
-        'requestId': '$id',
-        if (requestData != null) 'requestData': requestData,
-      },
-    }));
+
+    try {
+      _channel!.sink.add(jsonEncode({
+        'op': 6,
+        'd': {
+          'requestType': requestType,
+          'requestId': '$id',
+          if (requestData != null) 'requestData': requestData,
+        },
+      }));
+    } catch (error, stack) {
+      _pending.remove(id);
+      if (!completer.isCompleted) {
+        completer.completeError(error, stack);
+      }
+      rethrow;
+    }
 
     try {
       return await completer.future.timeout(const Duration(seconds: 10));
@@ -153,8 +184,12 @@ class ObsAdapter {
   }
 
   Future<void> switchScene(String sceneName) async {
+    final normalizedScene = sceneName.trim();
+    if (normalizedScene.isEmpty) {
+      throw ArgumentError('OBS scene name cannot be empty.');
+    }
     await call('SetCurrentProgramScene', requestData: {
-      'sceneName': sceneName,
+      'sceneName': normalizedScene,
     });
   }
 
@@ -171,10 +206,15 @@ class ObsAdapter {
     _failPending(StateError('OBS connection closed.'));
     await _subscription?.cancel();
     _subscription = null;
-    await _channel?.sink.close();
+    try {
+      await _channel?.sink.close();
+    } catch (_) {
+      // The channel may already be closed by the peer.
+    }
     _channel = null;
     _helloCompleter = null;
     _identifiedCompleter = null;
+    _requestId = 0;
   }
 
   void _failPending(Object error) {
