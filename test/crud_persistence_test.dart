@@ -64,6 +64,8 @@ void main() {
     expect(find.text('LIVE STUDIO ASR'), findsOneWidget);
     expect(find.text('Entrar'), findsOneWidget);
 
+    await tester.enterText(find.byType(TextFormField).at(0), AuthService.defaultUsername);
+    await tester.enterText(find.byType(TextFormField).at(1), AuthService.defaultPassword);
     await tester.tap(find.text('Entrar'));
     await tester.pump();
 
