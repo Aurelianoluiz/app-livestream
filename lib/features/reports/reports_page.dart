@@ -2,36 +2,108 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/transmissions_provider.dart';
 
-class ReportsPage extends ConsumerWidget {
+class ReportsPage extends ConsumerStatefulWidget {
   const ReportsPage({super.key});
 
-  String _status(List items, String status) =>
-      items.where((item) => item.data['status'] == status).length.toString();
+  @override
+  ConsumerState<ReportsPage> createState() => _ReportsPageState();
+}
+
+class _ReportsPageState extends ConsumerState<ReportsPage> {
+  String _filter = 'all';
+
+  int _countByStatus(List items, String status) =>
+      items.where((item) => item.data['status'] == status).length;
+
+  Duration _parseDuration(dynamic value) {
+    if (value is! String) return Duration.zero;
+    final parts = value.split(':');
+    if (parts.length != 3) return Duration.zero;
+    final h = int.tryParse(parts[0]) ?? 0;
+    final m = int.tryParse(parts[1]) ?? 0;
+    final s = int.tryParse(parts[2]) ?? 0;
+    return Duration(hours: h, minutes: m, seconds: s);
+  }
+
+  String _formatDuration(Duration duration) {
+    String two(int value) => value.toString().padLeft(2, '0');
+    return '${two(duration.inHours)}:${two(duration.inMinutes.remainder(60))}:${two(duration.inSeconds.remainder(60))}';
+  }
+
+  List _filtered(List items) {
+    if (_filter == 'all') return items;
+    return items.where((item) => item.data['status'] == _filter).toList();
+  }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final transmissions = ref.watch(transmissionsProvider);
-    final finished = transmissions.where((item) => item.data['status'] == 'finished').length;
-    final active = transmissions.where((item) => item.data['status'] == 'running' || item.data['status'] == 'paused').length;
-    final total = transmissions.length;
+  Widget build(BuildContext context) {
+    final all = ref.watch(transmissionsProvider);
+    final transmissions = _filtered(all);
+    final finished = _countByStatus(transmissions, 'finished');
+    final active = transmissions
+        .where((item) => item.data['status'] == 'running' || item.data['status'] == 'paused')
+        .length;
+    final scheduled = _countByStatus(transmissions, 'scheduled');
+    final totalDuration = transmissions.fold<Duration>(
+      Duration.zero,
+      (sum, item) => sum + _parseDuration(item.data['duration']),
+    );
+    final completedWithDuration = transmissions
+        .map((item) => _parseDuration(item.data['duration']))
+        .where((value) => value > Duration.zero)
+        .toList();
+    final averageDuration = completedWithDuration.isEmpty
+        ? Duration.zero
+        : Duration(milliseconds: totalDuration.inMilliseconds ~/ completedWithDuration.length);
+    final totalAll = all.length;
+    final completionRate = totalAll == 0 ? 0 : ((_countByStatus(all, 'finished') / totalAll) * 100).round();
+    final latest = all.isEmpty ? null : all.last;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Relatórios')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Text('Resumo operacional', style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 6),
-          const Text('Indicadores baseados no histórico de transmissões armazenado localmente.'),
+          Row(
+            children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Resumo operacional', style: Theme.of(context).textTheme.headlineSmall),
+                  const SizedBox(height: 6),
+                  const Text('Indicadores baseados no histórico de transmissões armazenado localmente.'),
+                ]),
+              ),
+              const SizedBox(width: 16),
+              SizedBox(
+                width: 190,
+                child: DropdownButtonFormField<String>(
+                  value: _filter,
+                  decoration: const InputDecoration(labelText: 'Filtrar status'),
+                  items: const [
+                    DropdownMenuItem(value: 'all', child: Text('Todos')),
+                    DropdownMenuItem(value: 'scheduled', child: Text('Agendadas')),
+                    DropdownMenuItem(value: 'running', child: Text('Ao vivo')),
+                    DropdownMenuItem(value: 'paused', child: Text('Pausadas')),
+                    DropdownMenuItem(value: 'finished', child: Text('Finalizadas')),
+                  ],
+                  onChanged: (value) => setState(() => _filter = value ?? 'all'),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 20),
           LayoutBuilder(
             builder: (context, constraints) {
-              final columns = constraints.maxWidth >= 900 ? 4 : constraints.maxWidth >= 600 ? 2 : 1;
+              final columns = constraints.maxWidth >= 1100 ? 4 : constraints.maxWidth >= 650 ? 2 : 1;
               final cards = [
-                _MetricCard(label: 'Total', value: '$total', icon: Icons.live_tv_outlined),
-                _MetricCard(label: 'Ao vivo/pausadas', value: '$active', icon: Icons.radio_button_checked),
+                _MetricCard(label: 'Total filtrado', value: '${transmissions.length}', icon: Icons.live_tv_outlined),
+                _MetricCard(label: 'Ativas/pausadas', value: '$active', icon: Icons.radio_button_checked),
                 _MetricCard(label: 'Finalizadas', value: '$finished', icon: Icons.stop_circle_outlined),
-                _MetricCard(label: 'Agendadas', value: _status(transmissions, 'scheduled'), icon: Icons.schedule),
+                _MetricCard(label: 'Agendadas', value: '$scheduled', icon: Icons.schedule),
+                _MetricCard(label: 'Tempo total', value: _formatDuration(totalDuration), icon: Icons.timer_outlined),
+                _MetricCard(label: 'Tempo médio', value: _formatDuration(averageDuration), icon: Icons.timelapse),
+                _MetricCard(label: 'Taxa de conclusão', value: '$completionRate%', icon: Icons.check_circle_outline),
+                _MetricCard(label: 'Última live', value: latest?.name ?? '—', icon: Icons.history),
               ];
               return GridView.count(
                 crossAxisCount: columns,
@@ -39,7 +111,7 @@ class ReportsPage extends ConsumerWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 2.6,
+                childAspectRatio: constraints.maxWidth >= 650 ? 2.4 : 3.2,
                 children: cards,
               );
             },
@@ -52,7 +124,7 @@ class ReportsPage extends ConsumerWidget {
                 Text('Histórico recente', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 12),
                 if (transmissions.isEmpty)
-                  const Text('Nenhuma transmissão registrada.')
+                  const Text('Nenhuma transmissão encontrada para o filtro selecionado.')
                 else
                   ...transmissions.reversed.take(20).map(
                     (item) => ListTile(
@@ -95,7 +167,7 @@ class _MetricCard extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(label),
               const SizedBox(height: 4),
-              Text(value, style: Theme.of(context).textTheme.headlineMedium),
+              Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.headlineMedium),
             ]),
           ),
         ]),
