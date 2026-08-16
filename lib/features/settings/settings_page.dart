@@ -36,9 +36,11 @@ class _SettingsPageState extends State<SettingsPage> {
       autoReconnect = settings['autoReconnect'] as bool? ?? true;
       loaded = true;
     });
+    obs.setAutoReconnect(autoReconnect);
   }
 
   Future<void> _save() async {
+    obs.setAutoReconnect(autoReconnect);
     await storage.saveSettings({
       'obsHost': hostController.text.trim().isEmpty ? 'localhost' : hostController.text.trim(),
       'obsPort': int.tryParse(portController.text) ?? 4455,
@@ -54,6 +56,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final port = int.tryParse(portController.text) ?? 4455;
     setState(() { busy = true; obsMessage = 'CONECTANDO...'; });
     try {
+      obs.setAutoReconnect(autoReconnect);
       await obs.connect(host: host, port: port, password: passwordController.text);
       final scene = await obs.currentScene();
       if (mounted) setState(() => obsMessage = scene.isEmpty ? 'OBS CONECTADO' : 'OBS CONECTADO • Cena: $scene');
@@ -124,7 +127,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   const SizedBox(height: 12),
                   TextField(controller: passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'Senha do OBS', border: OutlineInputBorder(), helperText: 'Usada somente durante a conexão e não salva em texto puro.')),
                   const SizedBox(height: 12),
-                  SwitchListTile.adaptive(contentPadding: EdgeInsets.zero, title: const Text('Reconectar automaticamente'), value: autoReconnect, onChanged: (value) => setState(() => autoReconnect = value)),
+                  SwitchListTile.adaptive(contentPadding: EdgeInsets.zero, title: const Text('Reconectar automaticamente'), subtitle: const Text('Tenta reconectar após uma perda de conexão durante esta sessão.'), value: autoReconnect, onChanged: (value) { setState(() => autoReconnect = value); obs.setAutoReconnect(value); }),
                   const SizedBox(height: 8),
                   Wrap(spacing: 8, runSpacing: 8, children: [
                     FilledButton.icon(onPressed: busy || obs.connected ? null : _connectObs, icon: const Icon(Icons.link), label: Text(busy ? 'Conectando...' : 'Conectar ao OBS')),
