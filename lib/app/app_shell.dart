@@ -23,7 +23,7 @@ class _AppShellState extends State<AppShell> {
       const TransmissionsPage(),
       SettingsPage(onLogout: widget.onLogout),
     ];
-    final items = const [
+    const items = [
       NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Início'),
       NavigationDestination(icon: Icon(Icons.perm_media_outlined), selectedIcon: Icon(Icons.perm_media), label: 'Mídia'),
       NavigationDestination(icon: Icon(Icons.live_tv_outlined), selectedIcon: Icon(Icons.live_tv), label: 'Lives'),
