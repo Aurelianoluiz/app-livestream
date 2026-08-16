@@ -1,69 +1,60 @@
-import 'dart:convert';
-import 'package:crypto/crypto.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'auth_provider.dart';
+import 'local_auth_provider.dart';
+import 'remote_auth_provider.dart';
 
 class AuthService {
-  static const _boxName = 'auth';
-  static const _authenticatedKey = 'authenticated';
-  static const _userKey = 'user';
-  static Future<void>? _initializing;
+  static const defaultUsername = LocalAuthProvider.username;
+  static const defaultPassword = LocalAuthProvider.password;
 
-  // V1 local account. Replace with server-side authentication before production use.
-  static const defaultUsername = 'admin@livestudioasr.com';
-  static const defaultPassword = 'ASR@2026';
+  static Future<void>? _initializing;
+  static AuthProvider? _provider;
+
+  /// Production uses a configured backend. When no backend URL is supplied,
+  /// V1's local provider remains available for development/homologation.
+  static AuthProvider _buildProvider() {
+    final baseUrl = const String.fromEnvironment('ASR_AUTH_API_BASE_URL');
+    if (baseUrl.trim().isNotEmpty) {
+      return RemoteAuthProvider(baseUrl: baseUrl);
+    }
+    return LocalAuthProvider();
+  }
+
+  static AuthProvider get _activeProvider => _provider ??= _buildProvider();
 
   static Future<void> initialize() {
-    _initializing ??= Hive.initFlutter();
+    _initializing ??= _activeProvider.initialize();
     return _initializing!;
   }
 
   static Future<void> initializeForTest(String path) {
-    _initializing ??= Future<void>(() => Hive.init(path));
+    _initializing = LocalAuthProvider.initializeForTest(path);
+    _provider = LocalAuthProvider();
     return _initializing!;
   }
 
   static Future<void> resetTestInitialization() async {
     _initializing = null;
-    if (Hive.isBoxOpen(_boxName)) {
-      await Hive.box<String>(_boxName).close();
-    }
+    _provider = null;
+    await LocalAuthProvider.resetTestInitialization();
   }
-
-  Future<Box<String>> _box() async {
-    await initialize();
-    if (Hive.isBoxOpen(_boxName)) return Hive.box<String>(_boxName);
-    return Hive.openBox<String>(_boxName);
-  }
-
-  String _hash(String value) => sha256.convert(utf8.encode(value)).toString();
 
   Future<bool> isAuthenticated() async {
-    final box = await _box();
-    return box.get(_authenticatedKey) == 'true';
+    await initialize();
+    return _activeProvider.isAuthenticated();
   }
 
   Future<String?> currentUser() async {
-    final box = await _box();
-    return box.get(_userKey);
+    await initialize();
+    return _activeProvider.currentUser();
   }
 
   Future<bool> login(String username, String password) async {
-    final valid = username.trim().toLowerCase() == defaultUsername &&
-        _hash(password) == _hash(defaultPassword);
-    final box = await _box();
-    if (!valid) {
-      await box.put(_authenticatedKey, 'false');
-      await box.delete(_userKey);
-      return false;
-    }
-    await box.put(_authenticatedKey, 'true');
-    await box.put(_userKey, defaultUsername);
-    return true;
+    await initialize();
+    return _activeProvider.login(username, password);
   }
 
   Future<void> logout() async {
-    final box = await _box();
-    await box.put(_authenticatedKey, 'false');
-    await box.delete(_userKey);
+    await initialize();
+    await _activeProvider.logout();
   }
 }
