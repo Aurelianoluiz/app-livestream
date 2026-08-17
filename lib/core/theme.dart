@@ -108,12 +108,12 @@ class AppTheme {
         ),
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) return Brand.primary;
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return Brand.primary;
           return dark ? const Color(0xFF7B838B) : const Color(0xFF9AA1A8);
         }),
-        trackColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) return Brand.primary.withOpacity(0.25);
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return Brand.primary.withOpacity(0.25);
           return dark ? const Color(0xFF2A3035) : const Color(0xFFD8DDE2);
         }),
       ),
