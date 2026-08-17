@@ -175,6 +175,126 @@ class _SettingsPageState extends State<SettingsPage> {
     return 'DESCONECTADO';
   }
 
+  Widget _sectionTitle(BuildContext context, String title, String subtitle, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Brand.primary.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Brand.primary.withOpacity(0.28)),
+            ),
+            child: const Icon(Icons.tune_rounded, color: Brand.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 2),
+                Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _metric(BuildContext context, String label, String value, IconData icon) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 150),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Brand.border.withOpacity(0.75)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Brand.primary, size: 20),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: Theme.of(context).textTheme.labelSmall),
+              const SizedBox(height: 2),
+              Text(value, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusHero(BuildContext context) {
+    final connected = obs.connected;
+    final reconnecting = obs.reconnecting;
+    final color = connected ? Brand.primary : (reconnecting ? Colors.amber : Theme.of(context).colorScheme.error);
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.surface,
+            Theme.of(context).colorScheme.surfaceContainerHighest,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: color.withOpacity(0.38)),
+        boxShadow: [BoxShadow(color: color.withOpacity(0.10), blurRadius: 24, offset: const Offset(0, 10))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(color: color.withOpacity(0.14), borderRadius: BorderRadius.circular(16), border: Border.all(color: color.withOpacity(0.35))),
+                child: Icon(connected ? Icons.wifi_rounded : Icons.wifi_off_rounded, color: color, size: 28),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('OBS STUDIO', style: Theme.of(context).textTheme.labelLarge?.copyWith(letterSpacing: 1.2, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 2),
+                    Text(obsMessage, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 4),
+                    Text('${_statusLabel()} • WebSocket v5', style: Theme.of(context).textTheme.bodySmall),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(999), border: Border.all(color: color.withOpacity(0.25))),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.circle, size: 8, color: color), const SizedBox(width: 8), Text(connected ? 'ONLINE' : reconnecting ? 'RECONNECT' : 'OFFLINE', style: TextStyle(color: color, fontWeight: FontWeight.w800))]),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Wrap(spacing: 10, runSpacing: 10, children: [
+            _metric(context, 'Latência', obs.lastRequestLatencyMs == null ? '—' : '${obs.lastRequestLatencyMs} ms', Icons.speed_rounded),
+            _metric(context, 'Reconexões', '${obs.reconnectAttempts}', Icons.autorenew_rounded),
+            _metric(context, 'Última conexão', _time(obs.lastConnectedAt), Icons.login_rounded),
+            _metric(context, 'Última mensagem', _time(obs.lastMessageAt), Icons.message_rounded),
+          ]),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _monitorTimer?.cancel();
@@ -186,126 +306,142 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Configurações')),
+      appBar: AppBar(
+        title: const Text('Configurações'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 14),
+            child: Chip(label: Text(Brand.name), avatar: const Icon(Icons.live_tv_rounded, size: 18)),
+          ),
+        ],
+      ),
       body: !loaded
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-              children: [
-                Text('Aparência', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 8),
-                Card(
-                  child: Column(
-                    children: [
-                      SwitchListTile.adaptive(
-                        title: const Text('Modo escuro premium'),
-                        subtitle: const Text('Tema inspirado em estúdios de transmissão, com grafite e laranja.'),
-                        value: darkMode,
-                        onChanged: (value) {
-                          setState(() => darkMode = value);
-                          AppThemeController.setDarkMode(value);
-                        },
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: CircleAvatar(backgroundColor: Brand.primary.withOpacity(0.14), child: const Icon(Icons.palette_outlined, color: Brand.primary)),
-                        title: const Text('LIVE STUDIO ASR'),
-                        subtitle: const Text('Identidade visual: preto, grafite, laranja e estados de transmissão.'),
-                        trailing: Icon(Icons.auto_awesome, color: scheme.primary),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text('Backup e restauração', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 8),
-                Card(
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final wide = constraints.maxWidth >= 900;
+                final sideWidth = wide ? 360.0 : double.infinity;
+                final mainWidth = wide ? constraints.maxWidth - sideWidth - 18 : double.infinity;
+
+                final appearanceCard = Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      children: [
+                        SwitchListTile.adaptive(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Modo escuro premium'),
+                          subtitle: const Text('Grafite, preto e laranja para operação de estúdio.'),
+                          value: darkMode,
+                          onChanged: (value) {
+                            setState(() => darkMode = value);
+                            AppThemeController.setDarkMode(value);
+                          },
+                        ),
+                        const Divider(height: 22),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(backgroundColor: Brand.primary.withOpacity(0.14), child: const Icon(Icons.palette_outlined, color: Brand.primary)),
+                          title: const Text('Identidade LIVE STUDIO ASR'),
+                          subtitle: const Text('Preto • grafite • laranja • estados de transmissão'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+
+                final backupCard = Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Backup versionado ASR_BACKUP_V1'),
-                        const SizedBox(height: 6),
-                        const Text('Exporta os dados e configurações para JSON. A restauração valida o arquivo antes de substituir os dados atuais.'),
+                        Row(children: const [Icon(Icons.backup_rounded, color: Brand.primary), SizedBox(width: 10), Text('BACKUP / RESTAURAÇÃO', style: TextStyle(fontWeight: FontWeight.w800))]),
+                        const SizedBox(height: 10),
+                        const Text('ASR_BACKUP_V1 • exportação e restauração com validação antes da substituição dos dados.'),
                         const SizedBox(height: 14),
                         Wrap(spacing: 8, runSpacing: 8, children: [
-                          FilledButton.icon(onPressed: _exportBackup, icon: const Icon(Icons.upload_file), label: const Text('Exportar backup')),
-                          OutlinedButton.icon(onPressed: _importBackup, icon: const Icon(Icons.restore), label: const Text('Importar backup')),
+                          FilledButton.icon(onPressed: _exportBackup, icon: const Icon(Icons.upload_file_rounded), label: const Text('Exportar backup')),
+                          OutlinedButton.icon(onPressed: _importBackup, icon: const Icon(Icons.restore_rounded), label: const Text('Importar backup')),
                         ]),
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                Text('OBS Studio', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 8),
-                Card(
+                );
+
+                final obsCard = Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(18),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ListTile(contentPadding: EdgeInsets.zero, leading: Icon(obs.connected ? Icons.link : Icons.link_off_outlined), title: Text(obsMessage), subtitle: Text('${_statusLabel()} • integração OBS WebSocket v5')),
-                        const SizedBox(height: 8),
-                        TextField(controller: hostController, decoration: const InputDecoration(labelText: 'Host', border: OutlineInputBorder())),
+                        Row(children: const [Icon(Icons.router_rounded, color: Brand.primary), SizedBox(width: 10), Text('CONEXÃO / CONTROLE OBS', style: TextStyle(fontWeight: FontWeight.w800))]),
+                        const SizedBox(height: 16),
+                        Row(children: [
+                          Expanded(child: TextField(controller: hostController, decoration: const InputDecoration(labelText: 'Host', prefixIcon: Icon(Icons.dns_outlined)))),
+                          const SizedBox(width: 12),
+                          SizedBox(width: 130, child: TextField(controller: portController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Porta'))),
+                        ]),
                         const SizedBox(height: 12),
-                        TextField(controller: portController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Porta', border: OutlineInputBorder())),
-                        const SizedBox(height: 12),
-                        TextField(controller: passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'Senha do OBS', border: OutlineInputBorder(), helperText: 'Usada somente durante a conexão e não salva em texto puro.')),
-                        const SizedBox(height: 12),
+                        TextField(controller: passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'Senha do OBS', prefixIcon: Icon(Icons.lock_outline), helperText: 'Mantida somente em memória durante a sessão.')),
+                        const SizedBox(height: 10),
                         SwitchListTile.adaptive(
                           contentPadding: EdgeInsets.zero,
                           title: const Text('Reconectar automaticamente'),
-                          subtitle: const Text('Tenta reconectar após uma perda de conexão durante esta sessão.'),
+                          subtitle: const Text('Reabre a sessão após perda de conexão.'),
                           value: autoReconnect,
                           onChanged: (value) { setState(() => autoReconnect = value); obs.setAutoReconnect(value); },
                         ),
                         const SizedBox(height: 12),
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Monitoramento operacional', style: Theme.of(context).textTheme.titleMedium),
-                                const SizedBox(height: 12),
-                                Wrap(spacing: 18, runSpacing: 12, children: [
-                                  Text('Última conexão: ${_time(obs.lastConnectedAt)}'),
-                                  Text('Última mensagem: ${_time(obs.lastMessageAt)}'),
-                                  Text('Última desconexão: ${_time(obs.lastDisconnectedAt)}'),
-                                  Text('Reconexões: ${obs.reconnectAttempts}'),
-                                  Text('Última tentativa: ${_time(obs.lastReconnectAt)}'),
-                                  Text('Latência: ${obs.lastRequestLatencyMs == null ? '—' : '${obs.lastRequestLatencyMs} ms'}'),
-                                ]),
-                                if (obs.lastError != null && obs.lastError!.isNotEmpty) ...[
-                                  const SizedBox(height: 12),
-                                  Text('Último erro: ${obs.lastError}', style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                                ],
-                              ],
-                            ),
-                          ),
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(16)),
+                          child: Wrap(spacing: 14, runSpacing: 10, children: [
+                            Text('Última desconexão: ${_time(obs.lastDisconnectedAt)}'),
+                            Text('Última tentativa: ${_time(obs.lastReconnectAt)}'),
+                            if (obs.lastError != null && obs.lastError!.isNotEmpty) Text('Último erro: ${obs.lastError}', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                          ]),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
                         Wrap(spacing: 8, runSpacing: 8, children: [
-                          FilledButton.icon(onPressed: busy || obs.connected ? null : _connectObs, icon: const Icon(Icons.link), label: Text(busy ? 'Conectando...' : 'Conectar ao OBS')),
-                          OutlinedButton.icon(onPressed: obs.connected ? _disconnectObs : null, icon: const Icon(Icons.link_off), label: const Text('Desconectar')),
-                          OutlinedButton.icon(onPressed: obs.connected ? _startStream : null, icon: const Icon(Icons.play_arrow), label: const Text('Iniciar Live')),
-                          OutlinedButton.icon(onPressed: obs.connected ? _stopStream : null, icon: const Icon(Icons.stop), label: const Text('Parar Live')),
-                          FilledButton.icon(onPressed: _save, icon: const Icon(Icons.save_outlined), label: const Text('Salvar configuração')),
+                          FilledButton.icon(onPressed: busy || obs.connected ? null : _connectObs, icon: const Icon(Icons.link_rounded), label: Text(busy ? 'Conectando...' : 'Conectar')),
+                          OutlinedButton.icon(onPressed: obs.connected ? _disconnectObs : null, icon: const Icon(Icons.link_off_rounded), label: const Text('Desconectar')),
+                          OutlinedButton.icon(onPressed: obs.connected ? _startStream : null, icon: const Icon(Icons.play_arrow_rounded), label: const Text('Iniciar Live')),
+                          OutlinedButton.icon(onPressed: obs.connected ? _stopStream : null, icon: const Icon(Icons.stop_rounded), label: const Text('Parar Live')),
+                          FilledButton.icon(onPressed: _save, icon: const Icon(Icons.save_rounded), label: const Text('Salvar')),
                         ]),
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                Card(child: Column(children: [
-                  const ListTile(leading: Icon(Icons.live_tv_outlined), title: Text('LIVE STUDIO ASR'), subtitle: Text('Web + Android • Riverpod • Hive • OBS WebSocket v5')),
-                  ListTile(leading: const Icon(Icons.logout), title: const Text('Sair da conta'), subtitle: const Text('Encerrar a sessão deste dispositivo'), onTap: widget.onLogout),
-                ])),
-              ],
+                );
+
+                final main = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  _statusHero(context),
+                  const SizedBox(height: 18),
+                  _sectionTitle(context, 'Controle do estúdio', 'Conexão, performance e comandos do OBS em um único lugar.', Icons.settings_input_component_rounded),
+                  obsCard,
+                ]);
+
+                final side = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  _sectionTitle(context, 'Preferências', 'Aparência e identidade visual.', Icons.palette_outlined),
+                  appearanceCard,
+                  const SizedBox(height: 18),
+                  backupCard,
+                  const SizedBox(height: 18),
+                  Card(child: Column(children: [
+                    const ListTile(leading: Icon(Icons.live_tv_outlined), title: Text('LIVE STUDIO ASR'), subtitle: Text('Web + Android • Riverpod • Hive • OBS WebSocket v5')),
+                    ListTile(leading: const Icon(Icons.logout), title: const Text('Sair da conta'), subtitle: const Text('Encerrar a sessão deste dispositivo'), onTap: widget.onLogout),
+                  ])),
+                ]);
+
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 36),
+                  children: wide
+                      ? [Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: mainWidth, child: main), const SizedBox(width: 18), SizedBox(width: sideWidth, child: side)])]
+                      : [main, const SizedBox(height: 20), side],
+                );
+              },
             ),
     );
   }
