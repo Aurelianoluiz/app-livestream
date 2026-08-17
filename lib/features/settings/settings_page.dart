@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../core/brand.dart';
+import '../../core/theme_controller.dart';
 import '../../services/backup_service.dart';
 import '../../services/obs_service.dart';
 import '../../services/storage_service.dart';
@@ -22,7 +24,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final backup = BackupService();
   final obs = ObsService.instance;
   Timer? _monitorTimer;
-  bool darkMode = false;
+  bool darkMode = true;
   bool autoReconnect = true;
   bool loaded = false;
   bool busy = false;
@@ -41,13 +43,15 @@ class _SettingsPageState extends State<SettingsPage> {
     await storage.init();
     final settings = await storage.loadSettings();
     if (!mounted) return;
+    final persistedDark = settings['darkMode'] as bool? ?? true;
     setState(() {
       hostController.text = (settings['obsHost'] as String?) ?? 'localhost';
       portController.text = '${settings['obsPort'] ?? 4455}';
-      darkMode = settings['darkMode'] as bool? ?? false;
+      darkMode = persistedDark;
       autoReconnect = settings['autoReconnect'] as bool? ?? true;
       loaded = true;
     });
+    AppThemeController.setDarkMode(persistedDark);
     obs.setAutoReconnect(autoReconnect);
   }
 
@@ -60,6 +64,7 @@ class _SettingsPageState extends State<SettingsPage> {
       'darkMode': darkMode,
       'autoReconnect': autoReconnect,
     });
+    AppThemeController.setDarkMode(darkMode);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Configurações salvas no Hive.')),
@@ -77,11 +82,7 @@ class _SettingsPageState extends State<SettingsPage> {
         );
       }
     } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Falha ao exportar backup: $error')),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Falha ao exportar backup: $error')));
     }
   }
 
@@ -97,45 +98,22 @@ class _SettingsPageState extends State<SettingsPage> {
             child: TextField(
               controller: controller,
               maxLines: 12,
-              decoration: const InputDecoration(
-                labelText: 'Cole aqui o JSON do backup',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Cole aqui o JSON do backup', border: OutlineInputBorder()),
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Validar e importar'),
-            ),
+            TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancelar')),
+            FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Validar e importar')),
           ],
         ),
       );
-
       if (confirmed != true || controller.text.trim().isEmpty) return;
-
       await backup.importJson(controller.text);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Backup validado e restaurado com sucesso.')),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backup validado e restaurado com sucesso.')));
     } on FormatException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Backup rejeitado: ${error.message}')),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Backup rejeitado: ${error.message}')));
     } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Falha ao importar backup: $error')),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Falha ao importar backup: $error')));
     } finally {
       controller.dispose();
     }
@@ -144,23 +122,16 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _connectObs() async {
     final host = hostController.text.trim().isEmpty ? 'localhost' : hostController.text.trim();
     final port = int.tryParse(portController.text) ?? 4455;
-    setState(() {
-      busy = true;
-      obsMessage = 'CONECTANDO...';
-    });
+    setState(() { busy = true; obsMessage = 'CONECTANDO...'; });
     try {
       obs.setAutoReconnect(autoReconnect);
       await obs.connect(host: host, port: port, password: passwordController.text);
       final scene = await obs.currentScene();
-      if (mounted) {
-        setState(() => obsMessage = scene.isEmpty ? 'OBS CONECTADO' : 'OBS CONECTADO • Cena: $scene');
-      }
+      if (mounted) setState(() => obsMessage = scene.isEmpty ? 'OBS CONECTADO' : 'OBS CONECTADO • Cena: $scene');
     } catch (error) {
       if (mounted) {
         setState(() => obsMessage = 'FALHA NA CONEXÃO');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Não foi possível conectar ao OBS: $error')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Não foi possível conectar ao OBS: $error')));
       }
     } finally {
       if (mounted) setState(() => busy = false);
@@ -177,11 +148,7 @@ class _SettingsPageState extends State<SettingsPage> {
       await obs.startStreaming();
       if (mounted) setState(() => obsMessage = 'OBS CONECTADO • TRANSMISSÃO INICIADA');
     } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Falha ao iniciar transmissão: $error')),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Falha ao iniciar transmissão: $error')));
     }
   }
 
@@ -190,11 +157,7 @@ class _SettingsPageState extends State<SettingsPage> {
       await obs.stopStreaming();
       if (mounted) setState(() => obsMessage = 'OBS CONECTADO • TRANSMISSÃO FINALIZADA');
     } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Falha ao finalizar transmissão: $error')),
-        );
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Falha ao finalizar transmissão: $error')));
     }
   }
 
@@ -223,6 +186,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Configurações')),
       body: !loaded
@@ -236,16 +200,20 @@ class _SettingsPageState extends State<SettingsPage> {
                   child: Column(
                     children: [
                       SwitchListTile.adaptive(
-                        title: const Text('Modo escuro'),
-                        subtitle: const Text('Preferência salva para futuras versões do tema'),
+                        title: const Text('Modo escuro premium'),
+                        subtitle: const Text('Tema inspirado em estúdios de transmissão, com grafite e laranja.'),
                         value: darkMode,
-                        onChanged: (value) => setState(() => darkMode = value),
+                        onChanged: (value) {
+                          setState(() => darkMode = value);
+                          AppThemeController.setDarkMode(value);
+                        },
                       ),
                       const Divider(height: 1),
-                      const ListTile(
-                        leading: Icon(Icons.palette_outlined),
-                        title: Text('Identidade visual'),
-                        subtitle: Text('LIVE STUDIO ASR'),
+                      ListTile(
+                        leading: CircleAvatar(backgroundColor: Brand.primary.withOpacity(0.14), child: const Icon(Icons.palette_outlined, color: Brand.primary)),
+                        title: const Text('LIVE STUDIO ASR'),
+                        subtitle: const Text('Identidade visual: preto, grafite, laranja e estados de transmissão.'),
+                        trailing: Icon(Icons.auto_awesome, color: scheme.primary),
                       ),
                     ],
                   ),
@@ -263,22 +231,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         const SizedBox(height: 6),
                         const Text('Exporta os dados e configurações para JSON. A restauração valida o arquivo antes de substituir os dados atuais.'),
                         const SizedBox(height: 14),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            FilledButton.icon(
-                              onPressed: _exportBackup,
-                              icon: const Icon(Icons.upload_file),
-                              label: const Text('Exportar backup'),
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: _importBackup,
-                              icon: const Icon(Icons.restore),
-                              label: const Text('Importar backup'),
-                            ),
-                          ],
-                        ),
+                        Wrap(spacing: 8, runSpacing: 8, children: [
+                          FilledButton.icon(onPressed: _exportBackup, icon: const Icon(Icons.upload_file), label: const Text('Exportar backup')),
+                          OutlinedButton.icon(onPressed: _importBackup, icon: const Icon(Icons.restore), label: const Text('Importar backup')),
+                        ]),
                       ],
                     ),
                   ),
@@ -291,12 +247,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: Icon(obs.connected ? Icons.link : Icons.link_off_outlined),
-                          title: Text(obsMessage),
-                          subtitle: Text('${_statusLabel()} • integração OBS WebSocket v5'),
-                        ),
+                        ListTile(contentPadding: EdgeInsets.zero, leading: Icon(obs.connected ? Icons.link : Icons.link_off_outlined), title: Text(obsMessage), subtitle: Text('${_statusLabel()} • integração OBS WebSocket v5')),
                         const SizedBox(height: 8),
                         TextField(controller: hostController, decoration: const InputDecoration(labelText: 'Host', border: OutlineInputBorder())),
                         const SizedBox(height: 12),
@@ -309,10 +260,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           title: const Text('Reconectar automaticamente'),
                           subtitle: const Text('Tenta reconectar após uma perda de conexão durante esta sessão.'),
                           value: autoReconnect,
-                          onChanged: (value) {
-                            setState(() => autoReconnect = value);
-                            obs.setAutoReconnect(value);
-                          },
+                          onChanged: (value) { setState(() => autoReconnect = value); obs.setAutoReconnect(value); },
                         ),
                         const SizedBox(height: 12),
                         Card(
@@ -324,18 +272,14 @@ class _SettingsPageState extends State<SettingsPage> {
                               children: [
                                 Text('Monitoramento operacional', style: Theme.of(context).textTheme.titleMedium),
                                 const SizedBox(height: 12),
-                                Wrap(
-                                  spacing: 18,
-                                  runSpacing: 12,
-                                  children: [
-                                    Text('Última conexão: ${_time(obs.lastConnectedAt)}'),
-                                    Text('Última mensagem: ${_time(obs.lastMessageAt)}'),
-                                    Text('Última desconexão: ${_time(obs.lastDisconnectedAt)}'),
-                                    Text('Reconexões: ${obs.reconnectAttempts}'),
-                                    Text('Última tentativa: ${_time(obs.lastReconnectAt)}'),
-                                    Text('Latência: ${obs.lastRequestLatencyMs == null ? '—' : '${obs.lastRequestLatencyMs} ms'}'),
-                                  ],
-                                ),
+                                Wrap(spacing: 18, runSpacing: 12, children: [
+                                  Text('Última conexão: ${_time(obs.lastConnectedAt)}'),
+                                  Text('Última mensagem: ${_time(obs.lastMessageAt)}'),
+                                  Text('Última desconexão: ${_time(obs.lastDisconnectedAt)}'),
+                                  Text('Reconexões: ${obs.reconnectAttempts}'),
+                                  Text('Última tentativa: ${_time(obs.lastReconnectAt)}'),
+                                  Text('Latência: ${obs.lastRequestLatencyMs == null ? '—' : '${obs.lastRequestLatencyMs} ms'}'),
+                                ]),
                                 if (obs.lastError != null && obs.lastError!.isNotEmpty) ...[
                                   const SizedBox(height: 12),
                                   Text('Último erro: ${obs.lastError}', style: TextStyle(color: Theme.of(context).colorScheme.error)),
@@ -345,30 +289,22 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            FilledButton.icon(onPressed: busy || obs.connected ? null : _connectObs, icon: const Icon(Icons.link), label: Text(busy ? 'Conectando...' : 'Conectar ao OBS')),
-                            OutlinedButton.icon(onPressed: obs.connected ? _disconnectObs : null, icon: const Icon(Icons.link_off), label: const Text('Desconectar')),
-                            OutlinedButton.icon(onPressed: obs.connected ? _startStream : null, icon: const Icon(Icons.play_arrow), label: const Text('Iniciar Live')),
-                            OutlinedButton.icon(onPressed: obs.connected ? _stopStream : null, icon: const Icon(Icons.stop), label: const Text('Parar Live')),
-                            FilledButton.icon(onPressed: _save, icon: const Icon(Icons.save_outlined), label: const Text('Salvar configuração')),
-                          ],
-                        ),
+                        Wrap(spacing: 8, runSpacing: 8, children: [
+                          FilledButton.icon(onPressed: busy || obs.connected ? null : _connectObs, icon: const Icon(Icons.link), label: Text(busy ? 'Conectando...' : 'Conectar ao OBS')),
+                          OutlinedButton.icon(onPressed: obs.connected ? _disconnectObs : null, icon: const Icon(Icons.link_off), label: const Text('Desconectar')),
+                          OutlinedButton.icon(onPressed: obs.connected ? _startStream : null, icon: const Icon(Icons.play_arrow), label: const Text('Iniciar Live')),
+                          OutlinedButton.icon(onPressed: obs.connected ? _stopStream : null, icon: const Icon(Icons.stop), label: const Text('Parar Live')),
+                          FilledButton.icon(onPressed: _save, icon: const Icon(Icons.save_outlined), label: const Text('Salvar configuração')),
+                        ]),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 24),
-                Card(
-                  child: Column(
-                    children: [
-                      const ListTile(leading: Icon(Icons.live_tv_outlined), title: Text('LIVE STUDIO ASR'), subtitle: Text('Web + Android • Riverpod • Hive • OBS WebSocket v5')),
-                      ListTile(leading: const Icon(Icons.logout), title: const Text('Sair da conta'), subtitle: const Text('Encerrar a sessão deste dispositivo'), onTap: widget.onLogout),
-                    ],
-                  ),
-                ),
+                Card(child: Column(children: [
+                  const ListTile(leading: Icon(Icons.live_tv_outlined), title: Text('LIVE STUDIO ASR'), subtitle: Text('Web + Android • Riverpod • Hive • OBS WebSocket v5')),
+                  ListTile(leading: const Icon(Icons.logout), title: const Text('Sair da conta'), subtitle: const Text('Encerrar a sessão deste dispositivo'), onTap: widget.onLogout),
+                ])),
               ],
             ),
     );

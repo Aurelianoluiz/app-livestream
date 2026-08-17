@@ -10,7 +10,6 @@ class AppTheme {
       primary: Brand.primary,
       onPrimary: Colors.white,
       secondary: Brand.primaryDark,
-      surface: dark ? Brand.surface : const Color(0xFFFFFFFF),
     );
 
     return ThemeData(
@@ -19,7 +18,6 @@ class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: dark ? Brand.background : const Color(0xFFF4F5F7),
       canvasColor: dark ? Brand.background : const Color(0xFFF4F5F7),
-      fontFamily: 'Arial',
       appBarTheme: AppBarTheme(
         backgroundColor: dark ? Brand.background : Colors.white,
         foregroundColor: dark ? Brand.text : const Color(0xFF151719),
@@ -33,7 +31,7 @@ class AppTheme {
           color: dark ? Brand.text : const Color(0xFF151719),
         ),
       ),
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         color: dark ? Brand.surface : Colors.white,
         surfaceTintColor: Colors.transparent,
         margin: EdgeInsets.zero,
@@ -91,7 +89,6 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Brand.primary, width: 1.6),
         ),
-        labelStyle: TextStyle(color: dark ? Brand.muted : const Color(0xFF66707A)),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -122,12 +119,12 @@ class AppTheme {
         ),
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return Brand.primary;
+        thumbColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) return Brand.primary;
           return dark ? const Color(0xFF7B838B) : const Color(0xFF9AA1A8);
         }),
-        trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return Brand.primary.withOpacity(0.25);
+        trackColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) return Brand.primary.withOpacity(0.25);
           return dark ? const Color(0xFF2A3035) : const Color(0xFFD8DDE2);
         }),
       ),
