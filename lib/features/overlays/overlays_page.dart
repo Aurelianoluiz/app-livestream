@@ -13,6 +13,6 @@ class OverlaysPage extends StatelessWidget {
       inputDecorationTheme: base.inputDecorationTheme.copyWith(filled: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))),
       floatingActionButtonTheme: base.floatingActionButtonTheme.copyWith(backgroundColor: const Color(0xFFFF7A00), foregroundColor: Colors.white),
     );
-    return Theme(data: studio, child: const EntityListPage(title: 'Overlays', singular: 'Overlay', provider: overlaysProvider));
+    return Theme(data: studio, child: EntityListPage(title: 'Overlays', singular: 'Overlay', provider: overlaysProvider));
   }
 }
