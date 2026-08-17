@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'auth_http_client.dart';
 import 'auth_provider.dart';
 
 /// REST authentication client for the production backend.
@@ -15,14 +16,15 @@ import 'auth_provider.dart';
 /// POST /v1/auth/logout -> 2xx
 ///
 /// Authentication state is kept in the backend session/cookie. No password or
-/// long-lived access token is persisted by this client.
+/// long-lived access token is persisted by this client. Browser builds use a
+/// credentialed HTTP client so cross-origin session cookies can participate.
 class RemoteAuthProvider implements AuthProvider {
   RemoteAuthProvider({String? baseUrl, http.Client? client})
       : _baseUrl = (baseUrl ??
                 const String.fromEnvironment('ASR_AUTH_API_BASE_URL'))
             .trim()
             .replaceFirst(RegExp(r'/+$'), ''),
-        _client = client ?? http.Client();
+        _client = client ?? createAuthHttpClient();
 
   final String _baseUrl;
   final http.Client _client;
