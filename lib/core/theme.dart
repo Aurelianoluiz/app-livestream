@@ -61,11 +61,6 @@ class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: dark ? const Color(0xFF0F1113) : Colors.white,
         indicatorColor: Brand.primary.withOpacity(dark ? 0.16 : 0.12),
-        selectedIconTheme: const IconThemeData(color: Brand.primary),
-        selectedLabelTextStyle: const TextStyle(
-          fontWeight: FontWeight.w800,
-          color: Brand.primary,
-        ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
