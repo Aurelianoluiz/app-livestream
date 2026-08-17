@@ -82,10 +82,7 @@ class _LoginPageState extends State<LoginPage> {
                       padding: const EdgeInsets.fromLTRB(28, 30, 28, 26),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [
-                            scheme.primary.withOpacity(.16),
-                            scheme.surface,
-                          ],
+                          colors: [scheme.primary.withOpacity(.16), scheme.surface],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -107,10 +104,7 @@ class _LoginPageState extends State<LoginPage> {
                           Text(
                             'LIVE STUDIO ASR',
                             textAlign: TextAlign.center,
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: .9,
-                            ),
+                            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900, letterSpacing: .9),
                           ),
                           const SizedBox(height: 6),
                           Text(
@@ -132,10 +126,7 @@ class _LoginPageState extends State<LoginPage> {
                                 const SizedBox(width: 7),
                                 Text(
                                   'AMBIENTE LOCAL',
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.0,
-                                  ),
+                                  style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w900, letterSpacing: 1.0),
                                 ),
                               ],
                             ),
@@ -212,7 +203,7 @@ class _LoginPageState extends State<LoginPage> {
                                 icon: _loading
                                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                                     : const Icon(Icons.login_rounded),
-                                label: Text(_loading ? 'Validando acesso...' : 'Entrar no estúdio'),
+                                label: Text(_loading ? 'Validando acesso...' : 'Entrar'),
                               ),
                             ),
                             const SizedBox(height: 16),
