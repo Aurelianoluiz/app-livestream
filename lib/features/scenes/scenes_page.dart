@@ -23,6 +23,6 @@ class ScenesPage extends StatelessWidget {
         foregroundColor: Colors.white,
       ),
     );
-    return Theme(data: studio, child: const EntityListPage(title: 'Cenas', singular: 'Cena', provider: scenesProvider));
+    return Theme(data: studio, child: EntityListPage(title: 'Cenas', singular: 'Cena', provider: scenesProvider));
   }
 }
