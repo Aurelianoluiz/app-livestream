@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/brand.dart';
 import '../core/theme_controller.dart';
@@ -233,12 +234,15 @@ class _Sidebar extends StatelessWidget {
       ),
     );
 
-    return collapsed
-        ? Tooltip(message: item.label, child: tile)
-        : tile;
+    return collapsed ? Tooltip(message: item.label, child: tile) : tile;
   }
 
-  Widget _footerButton(BuildContext context, {required IconData icon, required String label, required FutureOr<void> Function() onTap}) {
+  Widget _footerButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required FutureOr<void> Function() onTap,
+  }) {
     final scheme = Theme.of(context).colorScheme;
     return Tooltip(
       message: label,
