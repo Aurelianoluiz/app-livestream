@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+
+import '../../providers/demo_list_provider.dart';
+import '../../providers/offers_provider.dart';
+import '../../providers/overlays_provider.dart';
+import '../../providers/products_provider.dart';
+import '../../providers/scenes_provider.dart';
+import '../../providers/transmissions_provider.dart';
 import '../media/media_library.dart';
 import '../offers/offers_page.dart';
 import '../overlays/overlays_page.dart';
@@ -8,12 +15,6 @@ import '../products/products_page.dart';
 import '../scenes/scenes_page.dart';
 import '../settings/settings_page.dart';
 import '../transmissions/transmissions_page.dart';
-import '../../providers/demo_list_provider.dart';
-import '../../providers/offers_provider.dart';
-import '../../providers/overlays_provider.dart';
-import '../../providers/products_provider.dart';
-import '../../providers/scenes_provider.dart';
-import '../../providers/transmissions_provider.dart';
 
 class DashboardPage extends ConsumerWidget {
   final Future<void> Function()? onLogout;
@@ -28,6 +29,8 @@ class DashboardPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
     final scenes = ref.watch(scenesProvider);
     final products = ref.watch(productsProvider);
     final offers = ref.watch(offersProvider);
@@ -51,58 +54,65 @@ class DashboardPage extends ConsumerWidget {
     final modules = <({
       String title,
       String description,
+      String eyebrow,
       IconData icon,
       Widget page,
       int count,
-      String asset
+      String asset,
     })>[
       (
         title: 'Cenas',
-        description: 'Organize as cenas da transmissão',
+        description: 'Organize as cenas e a composição da live.',
+        eyebrow: 'STUDIO',
         icon: Icons.layers_outlined,
         page: const ScenesPage(),
         count: scenes.length,
-        asset: 'assets/illustrations/example-cenas.svg'
+        asset: 'assets/illustrations/example-cenas.svg',
       ),
       (
         title: 'Produtos',
-        description: 'Catálogo, preços e estoque',
+        description: 'Catálogo, preços e estoque em um único lugar.',
+        eyebrow: 'CATÁLOGO',
         icon: Icons.inventory_2_outlined,
         page: const ProductsPage(),
         count: products.length,
-        asset: 'assets/illustrations/example-produtos.svg'
+        asset: 'assets/illustrations/example-produtos.svg',
       ),
       (
         title: 'Ofertas',
-        description: 'Promoções e campanhas',
+        description: 'Crie campanhas e destaque produtos em promoção.',
+        eyebrow: 'COMERCIAL',
         icon: Icons.local_offer_outlined,
         page: const OffersPage(),
         count: offers.length,
-        asset: 'assets/illustrations/example-ofertas.svg'
+        asset: 'assets/illustrations/example-ofertas.svg',
       ),
       (
         title: 'Transmissões',
-        description: 'Agenda e controle das lives',
+        description: 'Controle agenda, estados e operação das lives.',
+        eyebrow: 'LIVE CONTROL',
         icon: Icons.live_tv_outlined,
         page: const TransmissionsPage(),
         count: transmissions.length,
-        asset: 'assets/illustrations/example-transmissoes.svg'
+        asset: 'assets/illustrations/example-transmissoes.svg',
       ),
       (
         title: 'Overlays',
-        description: 'Elementos visuais da live',
+        description: 'Identidade visual, banners e elementos da live.',
+        eyebrow: 'ON AIR',
         icon: Icons.dashboard_customize_outlined,
         page: const OverlaysPage(),
         count: overlays.length,
-        asset: 'assets/illustrations/example-overlays.svg'
+        asset: 'assets/illustrations/example-overlays.svg',
       ),
       (
         title: 'Mídia',
-        description: 'Imagens, logos e biblioteca',
+        description: 'Imagens, logos e arquivos usados pelo estúdio.',
+        eyebrow: 'MEDIA',
         icon: Icons.perm_media_outlined,
         page: const MediaLibrary(),
         count: 8,
-        asset: 'assets/images/example.jpg'
+        asset: 'assets/images/example.jpg',
       ),
     ];
 
@@ -120,67 +130,174 @@ class DashboardPage extends ConsumerWidget {
       );
     }
 
+    final active = current != null;
+    final paused = active && '${current!.data['status']}' == 'paused';
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('LIVE STUDIO ASR'),
+        toolbarHeight: 76,
+        titleSpacing: 20,
+        title: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: scheme.primary,
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: const Icon(Icons.graphic_eq, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('LIVE STUDIO ASR', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: 1)),
+                Text('Central de comando', style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+              ],
+            ),
+          ],
+        ),
         actions: [
-          IconButton(
-            onPressed: openSettings,
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Configurações',
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: OutlinedButton.icon(
+              onPressed: openSettings,
+              icon: const Icon(Icons.tune_rounded, size: 18),
+              label: const Text('Configurações'),
+            ),
           ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        padding: const EdgeInsets.fromLTRB(20, 22, 20, 36),
         children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final compact = constraints.maxWidth < 760;
-              final preview = _LivePreviewCard(
-                current: current,
-                onOpen: openTransmissions,
-              );
-              final summary = _SummaryCard(
-                counts: [
-                  scenes.length,
-                  products.length,
-                  offers.length,
-                  transmissions.length,
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              gradient: LinearGradient(
+                colors: [
+                  scheme.primary.withOpacity(0.18),
+                  scheme.surface,
                 ],
-                running: runningCount,
-                paused: pausedCount,
-                finished: finishedCount,
-              );
-              return compact
-                  ? Column(
-                      children: [preview, const SizedBox(height: 16), summary],
-                    )
-                  : Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(color: scheme.primary.withOpacity(0.35)),
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 840;
+                final content = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Expanded(flex: 3, child: preview),
-                        const SizedBox(width: 16),
-                        Expanded(flex: 2, child: summary),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: active ? scheme.primary : scheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(active ? Icons.circle : Icons.schedule_outlined, size: 11, color: active ? Colors.white : scheme.onSurfaceVariant),
+                              const SizedBox(width: 7),
+                              Text(
+                                active ? (paused ? 'LIVE PAUSADA' : 'AO VIVO') : 'PRONTO PARA LIVE',
+                                style: text.labelMedium?.copyWith(color: active ? Colors.white : scheme.onSurfaceVariant, fontWeight: FontWeight.w900, letterSpacing: 0.7),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        Text('01', style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w900, color: scheme.primary)),
                       ],
-                    );
-            },
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      active ? current!.name : 'Sua central de comando para a próxima live.',
+                      style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w900, height: 1.05),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      active
+                          ? (paused ? 'A transmissão está pausada. Retome o controle quando estiver pronto.' : 'A transmissão está ativa e pronta para ser controlada.')
+                          : 'Organize cenas, produtos, ofertas, overlays e mídia em um fluxo rápido de operação.',
+                      style: text.bodyLarge?.copyWith(color: scheme.onSurfaceVariant, height: 1.45),
+                    ),
+                    const SizedBox(height: 18),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        FilledButton.icon(
+                          onPressed: openTransmissions,
+                          icon: Icon(active ? Icons.tune_rounded : Icons.play_arrow_rounded),
+                          label: Text(active ? 'Controlar transmissão' : 'Abrir transmissões'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: openSettings,
+                          icon: const Icon(Icons.settings_input_antenna_rounded),
+                          label: const Text('Configurar OBS'),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+
+                final stats = Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    _MetricTile(label: 'Cenas', value: scenes.length.toString(), icon: Icons.layers_outlined),
+                    _MetricTile(label: 'Produtos', value: products.length.toString(), icon: Icons.inventory_2_outlined),
+                    _MetricTile(label: 'Ofertas', value: offers.length.toString(), icon: Icons.local_offer_outlined),
+                    _MetricTile(label: 'Lives', value: transmissions.length.toString(), icon: Icons.live_tv_outlined),
+                  ],
+                );
+
+                return compact
+                    ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [content, const SizedBox(height: 22), stats])
+                    : Row(crossAxisAlignment: CrossAxisAlignment.end, children: [Expanded(child: content), const SizedBox(width: 20), SizedBox(width: 330, child: stats)]);
+              },
+            ),
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Operação da live',
-            style: Theme.of(context).textTheme.headlineSmall,
+          const SizedBox(height: 26),
+          Row(
+            children: [
+              Expanded(
+                child: Text('Operação', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
+              ),
+              Text('$runningCount ao vivo  •  $pausedCount pausadas  •  $finishedCount finalizadas', style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+            ],
           ),
           const SizedBox(height: 12),
-          _QuickActionsCard(
-            current: current,
-            onOpenTransmissions: openTransmissions,
-            onOpenSettings: openSettings,
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: scheme.outlineVariant),
+            ),
+            child: Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                Chip(avatar: Icon(active ? Icons.circle : Icons.schedule_outlined, size: 12, color: active ? scheme.primary : null), label: Text(active ? (paused ? 'PAUSADA' : 'AO VIVO') : 'PRONTO')),
+                FilledButton.icon(onPressed: openTransmissions, icon: const Icon(Icons.live_tv_rounded), label: const Text('Transmissões')),
+                OutlinedButton.icon(onPressed: openSettings, icon: const Icon(Icons.settings_input_antenna_rounded), label: const Text('OBS Studio')),
+              ],
+            ),
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Módulos do estúdio',
-            style: Theme.of(context).textTheme.headlineSmall,
+          const SizedBox(height: 28),
+          Row(
+            children: [
+              Expanded(child: Text('Módulos do estúdio', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w900))),
+              Text('6 áreas', style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+            ],
           ),
           const SizedBox(height: 12),
           GridView.builder(
@@ -188,9 +305,9 @@ class DashboardPage extends ConsumerWidget {
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
               maxCrossAxisExtent: 360,
-              mainAxisExtent: 292,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
+              mainAxisExtent: 278,
+              crossAxisSpacing: 14,
+              mainAxisSpacing: 14,
             ),
             itemCount: modules.length,
             itemBuilder: (context, index) {
@@ -198,60 +315,60 @@ class DashboardPage extends ConsumerWidget {
               return Card(
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => module.page),
-                  ),
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => module.page)),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(
-                        height: 140,
-                        width: double.infinity,
-                        child: _asset(module.asset),
+                      Stack(
+                        children: [
+                          SizedBox(height: 132, width: double.infinity, child: _asset(module.asset)),
+                          Positioned(
+                            top: 10,
+                            left: 10,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                              decoration: BoxDecoration(color: Colors.black.withOpacity(0.64), borderRadius: BorderRadius.circular(999)),
+                              child: Text(module.eyebrow, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+                            ),
+                          ),
+                        ],
                       ),
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                          padding: const EdgeInsets.fromLTRB(15, 13, 15, 13),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(module.icon, size: 24),
-                              const SizedBox(width: 8),
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(color: scheme.primary.withOpacity(0.11), borderRadius: BorderRadius.circular(12)),
+                                child: Icon(module.icon, color: scheme.primary, size: 21),
+                              ),
+                              const SizedBox(width: 11),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
                                       children: [
-                                        Expanded(
-                                          child: Text(
-                                            module.title,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleLarge,
-                                          ),
-                                        ),
+                                        Expanded(child: Text(module.title, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w900))),
                                         Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 9,
-                                            vertical: 5,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primaryContainer,
-                                            borderRadius:
-                                                BorderRadius.circular(20),
-                                          ),
-                                          child: Text('${module.count}'),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(999)),
+                                          child: Text('${module.count}', style: text.labelMedium?.copyWith(fontWeight: FontWeight.w900)),
                                         ),
                                       ],
                                     ),
                                     const SizedBox(height: 6),
-                                    Text(
-                                      module.description,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
+                                    Text(module.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant, height: 1.35)),
+                                    const Spacer(),
+                                    Row(
+                                      children: [
+                                        Text('Abrir módulo', style: text.labelMedium?.copyWith(color: scheme.primary, fontWeight: FontWeight.w900)),
+                                        const SizedBox(width: 4),
+                                        Icon(Icons.arrow_forward_rounded, size: 16, color: scheme.primary),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -272,224 +389,30 @@ class DashboardPage extends ConsumerWidget {
   }
 }
 
-class _LivePreviewCard extends StatelessWidget {
-  final LiveRecord? current;
-  final VoidCallback onOpen;
-  const _LivePreviewCard({required this.current, required this.onOpen});
-
-  @override
-  Widget build(BuildContext context) {
-    final active = current != null;
-    final paused = active && '${current!.data['status']}' == 'paused';
-    final title = active ? current!.name : 'Nenhuma live em operação';
-    final subtitle = active
-        ? (paused
-            ? 'A transmissão está pausada.'
-            : 'A transmissão está ao vivo.')
-        : 'Abra Transmissões para preparar ou iniciar uma live.';
-
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: SizedBox(
-        height: 300,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset('assets/images/example.jpg', fit: BoxFit.cover),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.05),
-                    Colors.black.withOpacity(0.84),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: active
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      active ? (paused ? 'LIVE PAUSADA' : 'AO VIVO') : 'PRONTO PARA LIVE',
-                      style: TextStyle(
-                        color: active ? Colors.white : Colors.black87,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(color: Colors.white70),
-                  ),
-                  const SizedBox(height: 14),
-                  FilledButton.icon(
-                    onPressed: onOpen,
-                    icon: Icon(active ? Icons.tune : Icons.play_arrow),
-                    label: Text(active ? 'Controlar transmissão' : 'Abrir transmissões'),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SummaryCard extends StatelessWidget {
-  final List<int> counts;
-  final int running;
-  final int paused;
-  final int finished;
-  const _SummaryCard({
-    required this.counts,
-    required this.running,
-    required this.paused,
-    required this.finished,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const labels = ['Cenas', 'Produtos', 'Ofertas', 'Lives'];
-    const icons = [
-      Icons.layers_outlined,
-      Icons.inventory_2_outlined,
-      Icons.local_offer_outlined,
-      Icons.live_tv_outlined,
-    ];
-    final scheme = Theme.of(context).colorScheme;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Resumo rápido', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
-            ...List.generate(
-              labels.length,
-              (index) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    Icon(icons[index], size: 22),
-                    const SizedBox(width: 10),
-                    Expanded(child: Text(labels[index])),
-                    Text('${counts[index]}', style: Theme.of(context).textTheme.titleMedium),
-                  ],
-                ),
-              ),
-            ),
-            const Divider(),
-            const SizedBox(height: 8),
-            _StatusRow(label: 'Ao vivo', value: running, icon: Icons.live_tv, color: scheme.primary),
-            const SizedBox(height: 8),
-            _StatusRow(label: 'Pausadas', value: paused, icon: Icons.pause_circle_outline, color: scheme.onSurfaceVariant),
-            const SizedBox(height: 8),
-            _StatusRow(label: 'Finalizadas', value: finished, icon: Icons.check_circle_outline, color: scheme.onSurfaceVariant),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.link_off_outlined, size: 18, color: scheme.onSurfaceVariant),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text('OBS é conectado em Configurações.')),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusRow extends StatelessWidget {
+class _MetricTile extends StatelessWidget {
   final String label;
-  final int value;
+  final String value;
   final IconData icon;
-  final Color color;
-  const _StatusRow({required this.label, required this.value, required this.icon, required this.color});
+  const _MetricTile({required this.label, required this.value, required this.icon});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 19, color: color),
-        const SizedBox(width: 8),
-        Expanded(child: Text(label)),
-        Text('$value', style: Theme.of(context).textTheme.titleSmall),
-      ],
-    );
-  }
-}
-
-class _QuickActionsCard extends StatelessWidget {
-  final LiveRecord? current;
-  final VoidCallback onOpenTransmissions;
-  final VoidCallback onOpenSettings;
-  const _QuickActionsCard({required this.current, required this.onOpenTransmissions, required this.onOpenSettings});
-
-  @override
-  Widget build(BuildContext context) {
-    final status = current == null ? 'Nenhuma transmissão ativa' : '${current!.data['status']}';
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Chip(
-              avatar: Icon(current == null ? Icons.schedule : Icons.circle, size: 12),
-              label: Text(current == null ? 'PRONTO' : status.toUpperCase()),
-            ),
-            FilledButton.icon(
-              onPressed: onOpenTransmissions,
-              icon: const Icon(Icons.live_tv),
-              label: const Text('Transmissões'),
-            ),
-            OutlinedButton.icon(
-              onPressed: onOpenSettings,
-              icon: const Icon(Icons.settings_outlined),
-              label: const Text('Configurar OBS'),
-            ),
-          ],
-        ),
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: 152,
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: scheme.surface.withOpacity(0.76),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: scheme.primary),
+          const SizedBox(width: 8),
+          Expanded(child: Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant))),
+          Text(value, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
+        ],
       ),
     );
   }
