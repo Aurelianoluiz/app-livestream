@@ -93,7 +93,7 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
-class _Sidebar extends StatelessWidget {
+class _Sidebar extends StatefulWidget {
   final bool collapsed;
   final List<_NavItem> items;
   final int selectedIndex;
@@ -113,12 +113,19 @@ class _Sidebar extends StatelessWidget {
   });
 
   @override
+  State<_Sidebar> createState() => _SidebarState();
+}
+
+class _SidebarState extends State<_Sidebar> {
+  int? _hoveredIndex;
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final width = collapsed ? 82.0 : 252.0;
+    final width = widget.collapsed ? 82.0 : 252.0;
     final groups = <String, List<int>>{};
-    for (var i = 0; i < items.length; i++) {
-      groups.putIfAbsent(items[i].group, () => []).add(i);
+    for (var i = 0; i < widget.items.length; i++) {
+      groups.putIfAbsent(widget.items[i].group, () => []).add(i);
     }
 
     return AnimatedContainer(
@@ -146,7 +153,7 @@ class _Sidebar extends StatelessWidget {
                     ),
                     child: const Icon(Icons.live_tv_rounded, color: Brand.primary),
                   ),
-                  if (!collapsed) ...[
+                  if (!widget.collapsed) ...[
                     const SizedBox(width: 12),
                     const Expanded(
                       child: Column(
@@ -160,9 +167,9 @@ class _Sidebar extends StatelessWidget {
                     ),
                   ],
                   IconButton(
-                    tooltip: collapsed ? 'Expandir menu' : 'Recolher menu',
-                    onPressed: onToggle,
-                    icon: Icon(collapsed ? Icons.menu_rounded : Icons.menu_open_rounded),
+                    tooltip: widget.collapsed ? 'Expandir menu' : 'Recolher menu',
+                    onPressed: widget.onToggle,
+                    icon: Icon(widget.collapsed ? Icons.menu_rounded : Icons.menu_open_rounded),
                   ),
                 ],
               ),
@@ -172,7 +179,7 @@ class _Sidebar extends StatelessWidget {
                   padding: EdgeInsets.zero,
                   children: [
                     for (final entry in groups.entries) ...[
-                      if (!collapsed)
+                      if (!widget.collapsed)
                         Padding(
                           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
                           child: Text(
@@ -186,7 +193,7 @@ class _Sidebar extends StatelessWidget {
                           ),
                         ),
                       for (final index in entry.value) _item(context, index),
-                      if (!collapsed) const SizedBox(height: 8),
+                      if (!widget.collapsed) const SizedBox(height: 8),
                     ],
                   ],
                 ),
@@ -197,14 +204,14 @@ class _Sidebar extends StatelessWidget {
                 context,
                 icon: Theme.of(context).brightness == Brightness.dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
                 label: Theme.of(context).brightness == Brightness.dark ? 'Modo claro' : 'Modo escuro',
-                onTap: onThemeToggle,
+                onTap: widget.onThemeToggle,
               ),
               const SizedBox(height: 6),
               _footerButton(
                 context,
                 icon: Icons.logout_rounded,
                 label: 'Sair',
-                onTap: onLogout,
+                onTap: widget.onLogout,
               ),
             ],
           ),
@@ -214,27 +221,42 @@ class _Sidebar extends StatelessWidget {
   }
 
   Widget _item(BuildContext context, int index) {
-    final item = items[index];
-    final selected = selectedIndex == index;
+    final item = widget.items[index];
+    final selected = widget.selectedIndex == index;
+    final hovered = _hoveredIndex == index;
     final scheme = Theme.of(context).colorScheme;
-    final tile = Container(
-      margin: const EdgeInsets.symmetric(vertical: 3),
-      decoration: BoxDecoration(
-        color: selected ? Brand.primary.withOpacity(0.12) : Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        border: selected ? Border.all(color: Brand.primary.withOpacity(0.22)) : null,
-      ),
-      child: ListTile(
-        dense: true,
-        contentPadding: EdgeInsets.symmetric(horizontal: collapsed ? 12 : 14),
-        leading: Icon(selected ? item.activeIcon : item.icon, color: selected ? Brand.primary : scheme.onSurfaceVariant),
-        title: collapsed ? null : Text(item.label, style: TextStyle(fontWeight: selected ? FontWeight.w800 : FontWeight.w600)),
-        selected: selected,
-        onTap: () => onSelected(index),
+    final background = selected
+        ? Brand.primary.withOpacity(0.12)
+        : hovered
+            ? scheme.surfaceContainerHighest.withOpacity(0.72)
+            : Colors.transparent;
+
+    final tile = MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hoveredIndex = index),
+      onExit: (_) => setState(() => _hoveredIndex = null),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        margin: const EdgeInsets.symmetric(vertical: 3),
+        transform: hovered && !selected ? Matrix4.translationValues(2, 0, 0) : Matrix4.identity(),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(14),
+          border: selected ? Border.all(color: Brand.primary.withOpacity(0.22)) : hovered ? Border.all(color: scheme.outlineVariant) : null,
+        ),
+        child: ListTile(
+          dense: true,
+          contentPadding: EdgeInsets.symmetric(horizontal: widget.collapsed ? 12 : 14),
+          leading: Icon(selected ? item.activeIcon : item.icon, color: selected ? Brand.primary : scheme.onSurfaceVariant),
+          title: widget.collapsed ? null : Text(item.label, style: TextStyle(fontWeight: selected ? FontWeight.w800 : FontWeight.w600)),
+          selected: selected,
+          onTap: () => widget.onSelected(index),
+        ),
       ),
     );
 
-    return collapsed ? Tooltip(message: item.label, child: tile) : tile;
+    return widget.collapsed ? Tooltip(message: item.label, child: tile) : tile;
   }
 
   Widget _footerButton(
@@ -252,11 +274,11 @@ class _Sidebar extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           onTap: () => onTap(),
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: collapsed ? 12 : 14, vertical: 10),
+            padding: EdgeInsets.symmetric(horizontal: widget.collapsed ? 12 : 14, vertical: 10),
             child: Row(
               children: [
                 Icon(icon, color: scheme.onSurfaceVariant),
-                if (!collapsed) ...[
+                if (!widget.collapsed) ...[
                   const SizedBox(width: 12),
                   Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600))),
                 ],
