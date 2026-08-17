@@ -48,12 +48,6 @@ class AppTheme {
       ),
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: dark ? const Color(0xFF0F1113) : Colors.white,
-        selectedIconTheme: const IconThemeData(color: Brand.primary),
-        selectedLabelTextStyle: const TextStyle(
-          color: Brand.primary,
-          fontWeight: FontWeight.w800,
-          fontSize: 12,
-        ),
         unselectedIconTheme: IconThemeData(
           color: dark ? const Color(0xFF7D868E) : const Color(0xFF6C737A),
         ),
