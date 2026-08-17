@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../providers/demo_list_provider.dart';
 import '../../providers/offers_provider.dart';
 import '../../providers/overlays_provider.dart';
 import '../../providers/products_provider.dart';
@@ -131,7 +130,7 @@ class DashboardPage extends ConsumerWidget {
     }
 
     final active = current != null;
-    final paused = active && '${current!.data['status']}' == 'paused';
+    final paused = active && '${current.data['status']}' == 'paused';
 
     return Scaffold(
       appBar: AppBar(
@@ -218,7 +217,7 @@ class DashboardPage extends ConsumerWidget {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      active ? current!.name : 'Sua central de comando para a próxima live.',
+                      active ? current.name : 'Sua central de comando para a próxima live.',
                       style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w900, height: 1.05),
                     ),
                     const SizedBox(height: 8),
