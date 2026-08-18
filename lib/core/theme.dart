@@ -117,6 +117,17 @@ class AppTheme {
           return dark ? const Color(0xFF2A3035) : const Color(0xFFD8DDE2);
         }),
       ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: dark ? const Color(0xFF1B2025) : const Color(0xFF20262B),
+        contentTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+        actionTextColor: Brand.primary,
+        elevation: 8,
+        showCloseIcon: true,
+        closeIconColor: Colors.white70,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      ),
     );
   }
 
